@@ -5,6 +5,7 @@ import org.junit.runners.Suite;
 import org.junit.runners.Suite.SuiteClasses;
 
 import ca.mcgill.mcb.pcingola.snpEffect.testCases.integration.TestCasesAnn;
+import ca.mcgill.mcb.pcingola.snpEffect.testCases.integration.TestCasesHaplotypeAnn;
 import ca.mcgill.mcb.pcingola.snpEffect.testCases.integration.TestCasesIntegrationApply;
 import ca.mcgill.mcb.pcingola.snpEffect.testCases.integration.TestCasesIntegrationCancer;
 import ca.mcgill.mcb.pcingola.snpEffect.testCases.integration.TestCasesIntegrationCircularGenome;
@@ -76,6 +77,7 @@ import ca.mcgill.mcb.pcingola.snpEffect.testCases.unity.TestCasesIntegrationMark
 		TestCasesIntegrationGenomicSequences.class, //
 		TestCasesIntegrationGff3.class, //
 		TestCasesIntegrationGtf22.class, //
+		TestCasesHaplotypeAnn.class, //
 		TestCasesIntegrationHgvs.class, //
 		TestCasesIntegrationHgvsDel.class, //
 		TestCasesIntegrationHgvsDnaDup.class, //
