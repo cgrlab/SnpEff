@@ -2,12 +2,11 @@ package ca.mcgill.mcb.pcingola.snpEffect.testCases.unity;
 
 import java.util.Random;
 
-import junit.framework.Assert;
-
 import org.junit.Test;
 
 import ca.mcgill.mcb.pcingola.genotypes.GenotypeVector;
 import ca.mcgill.mcb.pcingola.util.Gpr;
+import junit.framework.Assert;
 
 /**
  * Test cases for GenotypeVector class
@@ -21,25 +20,15 @@ public class TestCasesGenotypeVector {
 	@Test
 	public void test_01() {
 		Gpr.debug("Test");
-		// Show masks (just to check they are OK)
-		for (byte m : GenotypeVector.mask) {
-			String line = "Mask          :" + m + "\t" + Integer.toBinaryString(m & 0xff);
-			if (verbose) System.out.println(line);
-		}
-
-		for (byte m : GenotypeVector.reverseMask) {
-			String line = "Reverse Mask  :" + m + "\t" + Integer.toBinaryString(m & 0xff);
-			if (verbose) System.out.println(line);
-		}
-
+		int len = 100;
 		for (int code = 0; code < 4; code++) {
-			GenotypeVector gv = new GenotypeVector(2);
+			GenotypeVector gv = new GenotypeVector(len);
 
-			for (int i = 0; i < 4; i++)
-				gv.set(i, code);
+			for (int i = 0; i < len; i++)
+				gv.set(i, (byte) code);
 
-			for (int i = 0; i < 4; i++)
-				Assert.assertEquals(code, gv.get(i));
+			for (int i = 0; i < len; i++)
+				Assert.assertEquals(code, gv.getCode(i));
 		}
 	}
 
@@ -52,14 +41,14 @@ public class TestCasesGenotypeVector {
 		// Create random codes
 		int codes[] = new int[gv.size()];
 		for (int i = 0; i < gv.size(); i++) {
-			int code = rand.nextInt(4);
+			byte code = (byte) rand.nextInt(4);
 			codes[i] = code;
 			gv.set(i, code);
 		}
 
 		// Check that codes are stored OK
 		for (int i = 0; i < gv.size(); i++) {
-			Assert.assertEquals(codes[i], gv.get(i));
+			Assert.assertEquals(codes[i], gv.getCode(i));
 		}
 	}
 }

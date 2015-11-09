@@ -1,0 +1,3 @@
+#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	SAMPLE_01
+7	116596741	.	T	A,C	.	.	codon_change=tgt/Agt,tgt/Cgt;aa_change=Cys/Ser,Cys/Arg	GT	1/2
+7	116596742	.	G	C	.	.	codon_change=tgt/tCt;aa_change=Cys/Ser;codon_change_haplotype=tgt/ACt,tgt/CCt;aa_change_haplotype=Cys/Thr,Cys/Pro	GT	1/1

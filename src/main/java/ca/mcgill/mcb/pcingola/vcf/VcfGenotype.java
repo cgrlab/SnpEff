@@ -119,12 +119,42 @@ public class VcfGenotype {
 	}
 
 	/**
+	 * Calculate genotype code.
+	 * Only assume "ALT" if it matches the provided 'alt'
+	 */
+	public int getGenotypeCode(String alt) {
+		parseFields(); // Lazy parse
+
+		// No genotype info?
+		if (genotype == null) return -1; // Missing genotype
+
+		// Find corresponding ALT code
+		String alts[] = vcfEntry.getAlts();
+		int altCode = -1;
+		for (int i = 0; i < alts.length; i++)
+			if (alts[i].equalsIgnoreCase(alt)) {
+				altCode = i;
+				break;
+			}
+
+		// Sanity check
+		if (altCode < 0) throw new RuntimeException("ALT '" + alt + "' does not match any ALT in VCF entry:\t" + vcfEntry);
+
+		// Calculate code
+		int code = 0;
+		for (int i = 0; i < genotype.length; i++) {
+			if (genotype[i] < 0) return -1; // Missing genotype
+			code += (genotype[i] == altCode ? 1 : 0); // Genotype matches 'alt'? Then is '1'
+		}
+
+		return code;
+	}
+
+	/**
 	 * Return as a genotype SNP code:
 	 * 		0:	if aa (0/0) or any missing value
 	 * 		1:	if Aa (0/1 or 1/0)
 	 * 		2:	if AA (1/1)
-	 *
-	 * @return
 	 */
 	public int getGenotypeCodeIgnoreMissing() {
 		parseFields(); // Lazy parse
@@ -141,7 +171,6 @@ public class VcfGenotype {
 
 	/**
 	 * Return genotypes as string (e.g. "A/C")
-	 * @return
 	 */
 	public String getGenotypeStr() {
 		parseFields(); // Lazy parse
@@ -192,7 +221,6 @@ public class VcfGenotype {
 
 	/**
 	 * Is the most likely genotype heterozygous?
-	 * @return
 	 */
 	public boolean isHeterozygous() {
 		return !isHomozygous();

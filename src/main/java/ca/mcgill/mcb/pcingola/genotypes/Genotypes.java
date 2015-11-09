@@ -23,7 +23,6 @@ public class Genotypes implements Serializable {
 
 	/**
 	 * Read from a file
-	 * @param fileName
 	 */
 	public static Genotypes load(String fileName) {
 		return (Genotypes) Gpr.readFileSerializedGz(fileName);
@@ -41,7 +40,6 @@ public class Genotypes implements Serializable {
 
 	/**
 	 * Load data
-	 * @return
 	 */
 	public boolean loadVcf() {
 		//---
@@ -87,7 +85,6 @@ public class Genotypes implements Serializable {
 
 	/**
 	 * Parse command line arguments
-	 * @param args
 	 */
 	public void parse(String[] args) {
 		if (args.length != 1) {
@@ -100,7 +97,6 @@ public class Genotypes implements Serializable {
 
 	/**
 	 * Save to file
-	 * @param fileName
 	 */
 	public void save(String fileName) {
 		Timer.showStdErr("Saving to file: " + fileName);
@@ -109,10 +105,6 @@ public class Genotypes implements Serializable {
 
 	/**
 	 * Set an entry
-	 * 
-	 * @param entryNum
-	 * @param sampleNum
-	 * @param vg
 	 */
 	public void set(int entryNum, int sampleNum, VcfGenotype vg) {
 		genotypeVectors[sampleNum].set(entryNum, vg);

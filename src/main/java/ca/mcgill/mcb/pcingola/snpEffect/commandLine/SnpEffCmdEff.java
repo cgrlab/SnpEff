@@ -862,8 +862,9 @@ public class SnpEffCmdEff extends SnpEff implements VcfAnnotator {
 			createSummaryCsv = false;
 		}
 		if (multiThreaded && cancer) usage("Cancer analysis is currently not supported in multi-threaded mode.");
+		if (multiThreaded && haplotypeAnnotations) usage("Haplotype analysis is currently not supported in multi-threaded mode.");
 		if (multiThreaded && !isOutVcf) usage("Multi-threaded option is only supported when when output is in VCF format");
-		if (multiThreaded && (createSummaryHtml || createSummaryCsv)) usage("Multi-threaded option should be used with 'noStats'.");
+		if (multiThreaded && (createSummaryHtml || createSummaryCsv)) usage("Multi-threaded option should be used with '-noStats'.");
 	}
 
 	/**

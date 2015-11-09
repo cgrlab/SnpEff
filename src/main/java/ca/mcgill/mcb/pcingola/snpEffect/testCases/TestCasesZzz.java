@@ -175,4 +175,25 @@ public class TestCasesZzz {
 	//		Assert.assertEquals("Incorrect haplotype annotation", "p.Cys13Lys", veff2.getHgvsP());
 	//	}
 
+	//	/**
+	//	 * Two consecutive multiallelic variants affecting the same codon 
+	//	 * Implicit phasing: All variants are homozygous ALT
+	//	 */
+	//	@Test
+	//	public void test_08() {
+	//		Gpr.debug("Test");
+	//		String vcfFile = "tests/haplotype_08.vcf";
+	//		String genome = "test_ENST00000597499";
+	//		List<VcfEntry> res = annotate(genome, vcfFile);
+	//
+	//		// Check that the second entry 
+	//		VcfEntry ve2 = res.get(1);
+	//		VcfEffect veff2 = ve2.getVcfEffects().get(0);
+	//		Assert.assertEquals("Incorrect haplotype annotation", "p.Cys13Thr", veff2.getHgvsP());
+	//
+	//		// Check that the second entry 
+	//		VcfEffect veff2b = ve2.getVcfEffects().get(1);
+	//		Assert.assertEquals("Incorrect haplotype annotation", "p.Cys13Pro", veff2b.getHgvsP());
+	//	}
+
 }
