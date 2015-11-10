@@ -8,7 +8,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import ca.mcgill.mcb.pcingola.genotypes.GenotypeVector;
+import ca.mcgill.mcb.pcingola.genotypes.Genotypes;
 import ca.mcgill.mcb.pcingola.interval.Variant;
 import ca.mcgill.mcb.pcingola.util.Gpr;
 
@@ -22,11 +22,11 @@ public class HaplotypeFinder {
 
 	public static boolean debug = true;
 
-	Map<String, GenotypeVector> genotypeVectors; // Sample genotypes
+	Map<String, Genotypes> genotypesByVariant; // Genotypes indexed by variant
 	Set<Haplotype> haplotypes; // Haplotypes found so far
 
 	public HaplotypeFinder() {
-		genotypeVectors = new HashMap<>();
+		genotypesByVariant = new HashMap<>();
 		haplotypes = new HashSet<>();
 	}
 
@@ -34,14 +34,14 @@ public class HaplotypeFinder {
 	 * Add new genotype vector and calculate all new haplotypes
 	 * @return A list of all new found haplotypes
 	 */
-	public List<Haplotype> add(GenotypeVector gv) {
+	public List<Haplotype> add(Genotypes gv) {
 		// First find all new haplotypes that can be created using this new entry
-		List<Haplotype> newhaplosGvs = haplotypesFromGenotypeVector(gv);
+		List<Haplotype> newhaplosGvs = haplotypesFromgenotypes(gv);
 
-		// Find all haplotypes based on current haplotypes 
+		// Find all haplotypes based on current haplotypes
 		Map<Haplotype, Haplotype> newHapsByOldHaps = haplotypesFromCurrentHaplotypes(gv);
 
-		// Add calculated haplotypes from GenotypeVectors
+		// Add calculated haplotypes from genotypess
 		for (Haplotype hap : newhaplosGvs) {
 			haplotypes.add(hap);
 			if (debug) Gpr.debug("Adding haplotype:" + hap);
@@ -59,7 +59,7 @@ public class HaplotypeFinder {
 		}
 
 		// Add new entry
-		addGenotypeVector(gv);
+		addgenotypes(gv);
 
 		// Return all found haplotypes
 		if (debug) Gpr.debug(this + "\n\n");
@@ -67,17 +67,17 @@ public class HaplotypeFinder {
 		return newhaplosGvs;
 	}
 
-	void addGenotypeVector(GenotypeVector gv) {
+	void addgenotypes(Genotypes gv) {
 		if (debug) Gpr.debug("Adding genotype: '" + toString(gv.getVariant()) + "'\t" + gv);
-		genotypeVectors.put(toString(gv.getVariant()), gv);
+		genotypesByVariant.put(toString(gv.getVariant()), gv);
 	}
 
 	protected boolean filter(Variant var) {
 		return true;
 	}
 
-	GenotypeVector getGenotypeVector(Variant variant) {
-		return genotypeVectors.get(toString(variant));
+	Genotypes getgenotypes(Variant variant) {
+		return genotypesByVariant.get(toString(variant));
 	}
 
 	public Set<Haplotype> getHaplotypes() {
@@ -85,28 +85,9 @@ public class HaplotypeFinder {
 	}
 
 	/**
-	 * Find new haplotypes using genotypes from 'genotypeVector'
-	 */
-	List<Haplotype> haplotypesFromGenotypeVector(GenotypeVector genotypeVector) {
-		List<Haplotype> haplotypes = new LinkedList<>();
-
-		// Compare to all current genotypeVectors
-		for (GenotypeVector gv : genotypeVectors.values()) {
-			if (genotypeVector.hasHaplotype(gv)) {
-				Haplotype h = new Haplotype();
-				h.add(gv.getVariant());
-				h.add(genotypeVector.getVariant());
-				haplotypes.add(h);
-			}
-		}
-
-		return haplotypes;
-	}
-
-	/**
 	 * Find new haplotypes using current haplotypes
 	 */
-	Map<Haplotype, Haplotype> haplotypesFromCurrentHaplotypes(GenotypeVector genotypeVector) {
+	Map<Haplotype, Haplotype> haplotypesFromCurrentHaplotypes(Genotypes genotypes) {
 		Map<Haplotype, Haplotype> newHapByOldHap = new HashMap<>();
 
 		// Compare to all current haplotypes
@@ -114,19 +95,20 @@ public class HaplotypeFinder {
 			if (debug) Gpr.debug("Analyzing haplotye: " + hapOld);
 
 			// Create a list of genotypes form all variants in 'hap'
-			List<GenotypeVector> gvs = new ArrayList<>();
+			List<Genotypes> gvs = new ArrayList<>();
 			for (Variant var : hapOld) {
-				GenotypeVector gv = getGenotypeVector(var);
-				if (gv == null) throw new RuntimeException("Could not find GenotypeVector for variant " + toString(var));
-				gvs.add(getGenotypeVector(var));
+				Genotypes gv = getgenotypes(var);
+				if (gv == null) throw new RuntimeException("Could not find genotypes for variant " + toString(var));
+				gvs.add(getgenotypes(var));
 			}
 
-			// Now check if there is a new haplotype 
-			if (genotypeVector.hasHaplotype(gvs)) {
+			// Now check if there is a new haplotype
+			Genotypes gvRes = genotypes.haplotype(gvs);
+			if (gvRes != null) {
 				// Create new haplotype with all the variants
 				Haplotype hapNew = new Haplotype();
-				hapNew.add(genotypeVector.getVariant());
-				for (GenotypeVector gv : gvs)
+				hapNew.add(genotypes.getVariant());
+				for (Genotypes gv : gvs)
 					hapNew.add(gv.getVariant());
 
 				newHapByOldHap.put(hapOld, hapNew);
@@ -134,6 +116,27 @@ public class HaplotypeFinder {
 		}
 
 		return newHapByOldHap;
+	}
+
+	/**
+	 * Find new haplotypes using genotypes from 'genotypes'
+	 */
+	List<Haplotype> haplotypesFromgenotypes(Genotypes genotypes) {
+		List<Haplotype> haplotypes = new LinkedList<>();
+
+		// Compare to all current genotypess
+		for (Genotypes gv : genotypesByVariant.values()) {
+			Genotypes gvRes = genotypes.haplotype(gv);
+
+			if (gvRes != null) {
+				Haplotype h = new Haplotype();
+				h.add(gv.getVariant());
+				h.add(genotypes.getVariant());
+				haplotypes.add(h);
+			}
+		}
+
+		return haplotypes;
 	}
 
 	/**
@@ -147,9 +150,9 @@ public class HaplotypeFinder {
 	public String toString() {
 		StringBuilder sb = new StringBuilder();
 
-		sb.append("Genotype vectors: " + genotypeVectors.size() + "\n");
+		sb.append("Genotype vectors: " + genotypesByVariant.size() + "\n");
 		int i = 0;
-		for (GenotypeVector g : genotypeVectors.values()) {
+		for (Genotypes g : genotypesByVariant.values()) {
 			sb.append(i + "\t" + g + "\n");
 			i++;
 		}

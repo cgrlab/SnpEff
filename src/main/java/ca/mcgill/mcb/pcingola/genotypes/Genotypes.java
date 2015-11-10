@@ -1,113 +1,388 @@
 package ca.mcgill.mcb.pcingola.genotypes;
 
 import java.io.Serializable;
+import java.util.Collection;
+import java.util.List;
 
-import ca.mcgill.mcb.pcingola.fileIterator.VcfFileIterator;
+import ca.mcgill.mcb.pcingola.interval.Variant;
 import ca.mcgill.mcb.pcingola.util.Gpr;
-import ca.mcgill.mcb.pcingola.util.Timer;
 import ca.mcgill.mcb.pcingola.vcf.VcfEntry;
 import ca.mcgill.mcb.pcingola.vcf.VcfGenotype;
 
 /**
- * Simple test program
+ * Genotypes for a set of (diploid/haploid) samples
+ *
+ * Each genotype is stored in 1 byte:
+ *   Phasing information is stored in bit 7.
+ *   Missing information is stored in bit 6.
+ *   Genotypes 0/0, 0/1, 1/0, 1/1 are stored bits 0 and 1
+ *
+ *   Coding: 76543210
+ *           ^^^   ^^
+ *           ||   Genotype: 0=0/0, 1=0/1, 2=1/0, 3=1/1
+ *           ||
+ *           |Missing: 1 if missing, 0 otherwise
+ *           |
+ *           Phase: 1 if phased, 0 otherwise
+ *
  * @author pcingola
  */
 public class Genotypes implements Serializable {
 
-	private static final long serialVersionUID = 5417498450863908076L;
+	protected static final byte PHASED_MASK = (byte) 0x80;
+	protected static final byte MISSING_MASK = (byte) 0x40;
+	protected static final byte GT_MASK = (byte) 0x03;
 
-	public static int MARK = 100;
+	protected static final int HAPLOID = 1;
+	protected static final int DIPLOID = 2;
 
-	String vcfFileName;
-	GenotypeVector genotypeVectors[];
+	private static final long serialVersionUID = 4734574592894281057L;
+
+	byte genotype[];
+	boolean haploid; // True if haploid, false if diploid
+	Variant variant;
+
+	public Genotypes(int size) {
+		init(size);
+	}
+
+	public Genotypes(VcfEntry ve) {
+		set(ve);
+	}
+
+	public Genotypes(VcfEntry ve, String alt) {
+		set(ve, alt);
+	}
 
 	/**
-	 * Read from a file
+	 * Are all genotypes 'REF'?
 	 */
-	public static Genotypes load(String fileName) {
-		return (Genotypes) Gpr.readFileSerializedGz(fileName);
-	}
+	public boolean allRef() {
+		int size = size();
+		for (int i = 0; i < size; i++)
+			if (!isHomozygousRef(genotype[i])) return false;
 
-	public static void main(String[] args) {
-		Genotypes genotypes = new Genotypes();
-		genotypes.parse(args);
-		genotypes.loadVcf();
-		genotypes.save("/tmp/geno.bin");
-	}
-
-	public Genotypes() {
-	}
-
-	/**
-	 * Load data
-	 */
-	public boolean loadVcf() {
-		//---
-		// Create data structure
-		//---
-		Timer.showStdErr("Counting lines form file: " + vcfFileName);
-		int numLines = Gpr.countLines(vcfFileName);
-		Timer.showStdErr("Done. Number of lines: " + numLines);
-
-		Timer.showStdErr("Loading file " + vcfFileName);
-		VcfFileIterator vcf = new VcfFileIterator(vcfFileName);
-		int entryNum = 0;
-		for (VcfEntry ve : vcf) {
-			if (genotypeVectors == null) {
-				long mem = ((long) ve.getVcfGenotypes().size()) * numLines / 4L;
-				double memG = mem / (1024.0 * 1024 * 1024);
-				Timer.showStdErr(String.format("Initializing data structures. Expected memory consumption (lower bound): %d bytes (%.2f Gb).", mem, memG));
-
-				genotypeVectors = new GenotypeVector[ve.getVcfGenotypes().size()];
-				for (int i = 0; i < genotypeVectors.length; i++)
-					genotypeVectors[i] = new GenotypeVector(numLines);
-
-				Timer.showStdErr("Done.");
-				Timer.showStdErr("Loading: ");
-			}
-
-			//System.out.print(ve.getChromosomeName() + ":" + ve.getStart());
-			int sampleNum = 0;
-			for (VcfGenotype vg : ve) {
-				set(entryNum, sampleNum++, vg);
-				//System.out.print(String.format("%2d", code));
-			}
-			//System.out.println("");
-
-			entryNum++;
-			Gpr.showMark(entryNum, MARK);
-		}
-
-		System.err.println("");
-		Timer.showStdErr("Done");
 		return true;
 	}
 
 	/**
-	 * Parse command line arguments
+	 * Calculate the resulting genotype vector after applying 'gv'
 	 */
-	public void parse(String[] args) {
-		if (args.length != 1) {
-			System.err.println("Usage: " + Genotypes.class.getSimpleName() + " vcfFile");
-			System.exit(-1);
+	protected Genotypes calcGenotypeVector(Genotypes gv) {
+		int size = size();
+		Genotypes newGv = new Genotypes(size);
+
+		if (!isHaploid() && !gv.isHaploid()) {
+			newGv.setPloidy(DIPLOID);
+
+			// Both are diploid genomes
+			for (int i = 0; i < size; i++) {
+				byte gt0 = getCode(i);
+				byte gt1 = gv.getCode(i);
+
+				if (isPhased(gt0) && isPhased(gt1)) {
+					// At least one bit remains the same in both genotypes
+					// (i.e. one genotype is the same)
+					// Note: We implicitly use the fact that missing
+					// genotypes are set to zero.
+					newGv.set(i, (byte) (gt0 & gt1));
+				} else {
+					// We need the same condition as in 'phased', but also
+					// at least one of them to be homozygous-ALT
+					if (isHomozygousAlt(gt0) || isHomozygousAlt(gt1)) newGv.set(i, (byte) (gt0 & gt1));
+				}
+			}
+		} else if (isHaploid() && gv.isHaploid()) {
+			newGv.setPloidy(HAPLOID);
+
+			// Both are haploid genomes: Any matching non-ref is implicitly
+			// phased since these are haploid chromosomes
+			for (int i = 0; i < size; i++) {
+				int gt0 = getCode(i) & GT_MASK;
+				int gt1 = gv.getCode(i) & GT_MASK;
+				if (gt0 != 0 && gt1 != 0) newGv.set(i, (byte) 1);
+			}
+		} else {
+			// One is haploid and the other is diploid
+			// This is a weird case.
+			// Also, may be a this implies a loss of heterozygosity
+			// I'm not sure if this is compliant with the VCF spec.)
+			throw new RuntimeException("Genotype verctors have different zygosity?" //
+					+ "\n\t" + this //
+					+ "\n\t" + gv //
+			);
 		}
 
-		vcfFileName = args[0];
+		return newGv;
 	}
 
 	/**
-	 * Save to file
+	 * Find index of 'alt' entry in VcfEntry
 	 */
-	public void save(String fileName) {
-		Timer.showStdErr("Saving to file: " + fileName);
-		Gpr.toFileSerializeGz(fileName, this);
+	int findAltIndex(VcfGenotype gt, String alt) {
+		VcfEntry vcfEntry = gt.getVcfEntry();
+		String alts[] = vcfEntry.getAlts();
+		int altIndex = -1;
+		for (int i = 0; i < alts.length; i++)
+			if (alts[i].equalsIgnoreCase(alt)) {
+				altIndex = i;
+				break;
+			}
+
+		// Sanity check
+		if (altIndex < 0) throw new RuntimeException("ALT '" + alt + "' does not match any ALT in VCF entry:\t" + vcfEntry);
+		return altIndex;
+	}
+
+	public String get(int sampleNum) {
+		byte code = genotype[sampleNum];
+
+		if (haploid) {
+			// Haploid chromosome
+			if (isMissing(code)) return ".";
+			return (code & GT_MASK) == 0 ? "0" : "1";
+		}
+
+		// Diploid
+		String slash = isPhased(code) ? "|" : "/";
+		if (isMissing(code)) return "." + slash + ".";
+		switch (code & GT_MASK) {
+		case 0:
+			return "0" + slash + "0";
+
+		case 1:
+			return "0" + slash + "1";
+
+		case 2:
+			return "1" + slash + "0";
+
+		case 3:
+			return "1" + slash + "1";
+
+		default:
+			throw new RuntimeException("Unknown code '" + code + "'");
+		}
+	}
+
+	public byte getCode(int sampleNum) {
+		return genotype[sampleNum];
 	}
 
 	/**
-	 * Set an entry
+	 * Calculate genotype code.
 	 */
-	public void set(int entryNum, int sampleNum, VcfGenotype vg) {
-		genotypeVectors[sampleNum].set(entryNum, vg);
+	byte getGenotypeCode(VcfGenotype gt) {
+		if (gt.isMissing()) return -1;
+
+		int gtCodes[] = gt.getGenotype();
+		if (gtCodes == null) return -1;
+
+		// Calculate code: Genotype matches is not 'REF'? Then set bit
+		// Note: We only support haploid / diploid entries
+		byte code = 0;
+		if (gtCodes[0] != 0) code |= 1;
+		if (gtCodes.length > 1 && gtCodes[1] != 0) code |= 2;
+
+		return code;
 	}
 
+	/**
+	 * Calculate genotype code.
+	 * Only assume "ALT" if it matches the provided 'alt'
+	 */
+	byte getGenotypeCode(VcfGenotype gt, String alt) {
+		if (gt.isMissing()) return -1;
+
+		int gtCodes[] = gt.getGenotype();
+		if (gtCodes == null) return -1;
+
+		// Find corresponding ALT code
+		int altCode = findAltIndex(gt, alt) + 1; // Code 0 means 'REF', so we have to add 1
+
+		// Calculate code: Genotype matches 'alt'? Then set bit
+		// Note: We only support haploid / diploid entries
+		byte code = 0;
+		if (gtCodes[0] == altCode) code |= 1;
+		if (gtCodes.length > 1 && gtCodes[1] == altCode) code |= 2;
+
+		return code;
+	}
+
+	public Variant getVariant() {
+		return variant;
+	}
+
+	/**
+	 * Can this genotype conform a haplotype with all the genotypes in 'gvs'?
+	 * @return The resulting genotype on success, null otherwise
+	 */
+	public Genotypes haplotype(Collection<Genotypes> gvs) {
+		Genotypes gvResult = this;
+
+		for (Genotypes gv : gvs) {
+			gvResult = gvResult.calcGenotypeVector(gv);
+			Gpr.debug("Calculated genotype: " + gvResult);
+			if (gvResult.allRef()) return null; // All entries are 'REF'? There is nothing else to do
+		}
+
+		return gvResult;
+	}
+
+	/**
+	 * Can this genotype conform a haplotype with genotype 'gv' ?
+	 * @return The resulting genotype on success, null otherwise
+	 */
+	public Genotypes haplotype(Genotypes gv) {
+		Genotypes gvResult = this.calcGenotypeVector(gv);
+		Gpr.debug("Calculated genotype: " + gvResult);
+		if (gvResult.allRef()) return null; // All entries are 'REF'? There is nothing else to do
+		return gvResult;
+	}
+
+	protected void init(int size) {
+		genotype = new byte[size];
+	}
+
+	public boolean isHaploid() {
+		return haploid;
+	}
+
+	boolean isHomozygousAlt(byte gtCode) {
+		return (gtCode & GT_MASK) == GT_MASK;
+	}
+
+	boolean isHomozygousRef(byte gtCode) {
+		return (gtCode & GT_MASK) == 0;
+	}
+
+	boolean isMissing(byte gtCode) {
+		return (gtCode & MISSING_MASK) != 0;
+	}
+
+	boolean isPhased(byte gtCode) {
+		return (gtCode & PHASED_MASK) != 0;
+	}
+
+	/**
+	 * Set genotype code
+	 * Codes {0, 1, 2, 3} => Genotypes { 0/0, 0/1, 1/0, 1/1 }
+	 */
+	public void set(int sampleNum, byte code) {
+		genotype[sampleNum] = code;
+	}
+
+	/**
+	 * Set genotype
+	 */
+	void set(int sampleNum, VcfGenotype vg) {
+		byte code = getGenotypeCode(vg);
+		if (code < 0) code = MISSING_MASK; // Note that we set the genotype part to zero.
+		if (vg.isPhased()) code |= PHASED_MASK;
+		set(sampleNum, code);
+	}
+
+	void set(int sampleNum, VcfGenotype vg, String alt) {
+		byte code = getGenotypeCode(vg, alt);
+		if (code < 0) code = MISSING_MASK; // Note that we set the genotype part to zero.
+		if (vg.isPhased()) code |= PHASED_MASK;
+		set(sampleNum, code);
+	}
+
+	void set(VcfEntry ve) {
+		if (ve.isMultiallelic()) throw new RuntimeException("Cannot add ulti-allelic VCF entries without specifiying an 'ALT'");
+
+		// Set variant
+		variant = ve.variants().get(0);
+
+		// Initialize
+		List<VcfGenotype> gts = ve.getVcfGenotypes();
+		init(gts.size());
+
+		// Set genotypes
+		int i = 0;
+		int ploidy = 0;
+		for (VcfGenotype gt : gts) {
+			set(i++, gt);
+			ploidy = Math.max(ploidy, gt.plodity());
+		}
+
+		setPloidy(ploidy);
+	}
+
+	public void set(VcfEntry ve, String alt) {
+		// Find corresponding variant
+		for (Variant var : ve.variants())
+			if (var.getGenotype().equalsIgnoreCase(alt)) {
+				variant = var;
+				break;
+			}
+		if (variant == null) throw new RuntimeException("Cannot find corresponding variant for ALT='" + alt + "'");
+
+		// Initialize
+		List<VcfGenotype> gts = ve.getVcfGenotypes();
+		init(gts.size());
+
+		// Set genotypes
+		int i = 0;
+		int ploidy = 0;
+		for (VcfGenotype gt : gts) {
+			set(i++, gt, alt);
+			ploidy = Math.max(ploidy, gt.plodity());
+		}
+
+		setPloidy(ploidy);
+	}
+
+	protected void setPloidy(int ploidy) {
+		switch (ploidy) {
+		case 1:
+			haploid = true;
+			break;
+
+		case 0: // Not found, assume diploid
+		case 2:
+			haploid = false;
+			break;
+
+		default:
+			throw new RuntimeException("Polyploidy not supported: ploidy=" + ploidy);
+		}
+	}
+
+	public int size() {
+		return genotype == null ? 0 : genotype.length;
+	}
+
+	@Override
+	public String toString() {
+		StringBuilder sb = new StringBuilder();
+
+		int size = size();
+		sb.append("Variant: ");
+		if (variant != null) sb.append(variant.getChromosomeName() + ":" + (variant.getStart() + 1) + "_" + variant.getReference() + ">" + variant.getAlt());
+		else sb.append("null");
+
+		sb.append(", " + (haploid ? "haploid" : "diploid"));
+		sb.append(", size:" + size);
+		sb.append(", genotypes:");
+
+		for (int i = 0; i < size; i++)
+			sb.append(" " + get(i));
+
+		return sb.toString();
+	}
+
+	/**
+	 * Return a string where position values are {0,1} depending
+	 * on whether the genotype is homozygous REF or not
+	 */
+	public String toStringNonRef() {
+		StringBuilder sb = new StringBuilder();
+
+		int size = size();
+		for (int i = 0; i < size; i++)
+			sb.append(isHomozygousRef(genotype[i]) ? "0" : "1");
+
+		return sb.toString();
+	}
 }

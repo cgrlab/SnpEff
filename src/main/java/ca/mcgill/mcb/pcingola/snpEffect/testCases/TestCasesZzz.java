@@ -8,7 +8,7 @@ import java.util.Set;
 import org.junit.Test;
 
 import ca.mcgill.mcb.pcingola.fileIterator.VcfFileIterator;
-import ca.mcgill.mcb.pcingola.genotypes.GenotypeVector;
+import ca.mcgill.mcb.pcingola.genotypes.Genotypes;
 import ca.mcgill.mcb.pcingola.interval.Variant;
 import ca.mcgill.mcb.pcingola.util.Gpr;
 import ca.mcgill.mcb.pcingola.vcf.Haplotype;
@@ -40,12 +40,12 @@ public class TestCasesZzz {
 				if (verbose) Gpr.debug(ve);
 				for (Variant var : ve.variants()) {
 					String alt = var.getGenotype();
-					GenotypeVector gv = new GenotypeVector(ve, var.getGenotype());
+					Genotypes gv = new Genotypes(ve, var.getGenotype());
 					if (verbose) Gpr.debug("\tAlt: '" + alt + "'\tGenotype vector: " + gv);
 					hf.add(gv);
 				}
 			} else {
-				GenotypeVector gv = new GenotypeVector(ve);
+				Genotypes gv = new Genotypes(ve);
 				if (verbose) Gpr.debug(ve + "\n\tGenotype vector: " + gv);
 				hf.add(gv);
 			}
@@ -83,7 +83,7 @@ public class TestCasesZzz {
 		HaplotypeFinder hf = new HaplotypeFinder();
 
 		for (VcfEntry ve : vcf) {
-			GenotypeVector gv = new GenotypeVector(ve);
+			Genotypes gv = new Genotypes(ve);
 			if (verbose) Gpr.debug(ve + "\n\tGenotype vector: " + gv);
 			hf.add(gv);
 		}

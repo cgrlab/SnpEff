@@ -4,7 +4,7 @@ import java.util.Random;
 
 import org.junit.Test;
 
-import ca.mcgill.mcb.pcingola.genotypes.GenotypeVector;
+import ca.mcgill.mcb.pcingola.genotypes.Genotypes;
 import ca.mcgill.mcb.pcingola.util.Gpr;
 import junit.framework.Assert;
 
@@ -22,7 +22,7 @@ public class TestCasesGenotypeVector {
 		Gpr.debug("Test");
 		int len = 100;
 		for (int code = 0; code < 4; code++) {
-			GenotypeVector gv = new GenotypeVector(len);
+			Genotypes gv = new Genotypes(len);
 
 			for (int i = 0; i < len; i++)
 				gv.set(i, (byte) code);
@@ -36,7 +36,7 @@ public class TestCasesGenotypeVector {
 	public void test_02() {
 		Gpr.debug("Test");
 		Random rand = new Random(20121221);
-		GenotypeVector gv = new GenotypeVector(1000);
+		Genotypes gv = new Genotypes(1000);
 
 		// Create random codes
 		int codes[] = new int[gv.size()];
