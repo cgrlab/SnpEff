@@ -54,16 +54,16 @@ public class GenotypeVector implements Serializable {
 	int findAltIndex(VcfGenotype gt, String alt) {
 		VcfEntry vcfEntry = gt.getVcfEntry();
 		String alts[] = vcfEntry.getAlts();
-		int altCode = -1;
+		int altIndex = -1;
 		for (int i = 0; i < alts.length; i++)
 			if (alts[i].equalsIgnoreCase(alt)) {
-				altCode = i;
+				altIndex = i;
 				break;
 			}
 
 		// Sanity check
-		if (altCode < 0) throw new RuntimeException("ALT '" + alt + "' does not match any ALT in VCF entry:\t" + vcfEntry);
-		return altCode;
+		if (altIndex < 0) throw new RuntimeException("ALT '" + alt + "' does not match any ALT in VCF entry:\t" + vcfEntry);
+		return altIndex;
 	}
 
 	public String get(int sampleNum) {
@@ -129,13 +129,13 @@ public class GenotypeVector implements Serializable {
 		if (gtCodes == null) return -1;
 
 		// Find corresponding ALT code
-		int altIndex = findAltIndex(gt, alt);
+		int altCode = findAltIndex(gt, alt) + 1; // Code 0 means 'REF', so we have to add 1
 
 		// Calculate code: Genotype matches 'alt'? Then set bit
 		// Note: We only support haploid / diploid entries
 		byte code = 0;
-		if (gtCodes[0] == altIndex) code |= 1;
-		if (gtCodes.length > 1 && gtCodes[1] == altIndex) code |= 2;
+		if (gtCodes[0] == altCode) code |= 1;
+		if (gtCodes.length > 1 && gtCodes[1] == altCode) code |= 2;
 
 		return code;
 	}

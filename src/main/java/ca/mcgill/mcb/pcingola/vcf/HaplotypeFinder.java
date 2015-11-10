@@ -63,4 +63,13 @@ public class HaplotypeFinder {
 		return false;
 	}
 
+	@Override
+	public String toString() {
+		StringBuilder sb = new StringBuilder();
+		sb.append("Genotype vectors: " + genotypeVectors.size() + "\n");
+		for (int i = 0; i < genotypeVectors.size(); i++)
+			sb.append(i + "\t" + genotypeVectors.get(i) + "\n");
+		return sb.toString();
+	}
+
 }
