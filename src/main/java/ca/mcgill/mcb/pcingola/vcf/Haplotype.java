@@ -2,9 +2,7 @@ package ca.mcgill.mcb.pcingola.vcf;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import ca.mcgill.mcb.pcingola.interval.Marker;
 import ca.mcgill.mcb.pcingola.interval.Variant;
@@ -18,16 +16,13 @@ import ca.mcgill.mcb.pcingola.interval.Variant;
 public class Haplotype {
 
 	List<Variant> variants;
-	Map<Variant, VcfEntry> vcfEntryByVariant;
 
 	public Haplotype() {
 		variants = new ArrayList<Variant>();
-		vcfEntryByVariant = new HashMap<>();
 	}
 
-	public void add(Variant var, VcfEntry ve) {
+	public void add(Variant var) {
 		variants.add(var);
-		vcfEntryByVariant.put(var, ve);
 	}
 
 	/**
@@ -47,15 +42,32 @@ public class Haplotype {
 		return marker;
 	}
 
-	public List<Variant> getHaplotype() {
-		return variants;
+	/**
+	 * Genotype string in 'ANN' format
+	 */
+	public String getAnnGenotype() {
+		Collections.sort(variants, Collections.reverseOrder());
+
+		StringBuilder sb = new StringBuilder();
+		boolean first = true;
+		for (Variant var : variants) {
+			if (first) {
+				sb.append(var.getGenotype());
+				first = false;
+			} else {
+				sb.append("-" + var.getChromosomeName() //
+						+ ":" + (var.getStart() + 1) //
+						+ "_" + var.getReference() //
+						+ ">" + var.getAlt()) //
+						;
+			}
+		}
+
+		return sb.toString();
 	}
 
-	/**
-	 * Get VcfEntry associated with variant 'var'
-	 */
-	public VcfEntry getVcfEntry(Variant var) {
-		return vcfEntryByVariant.get(var);
+	public List<Variant> getHaplotype() {
+		return variants;
 	}
 
 }
