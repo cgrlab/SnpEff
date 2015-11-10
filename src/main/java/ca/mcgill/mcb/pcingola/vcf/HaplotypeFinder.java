@@ -22,11 +22,11 @@ public class HaplotypeFinder {
 
 	public static boolean debug = false;
 
-	Map<String, Genotypes> genotypesByHaplotype; // All current genotypes
-	Set<Genotypes> haplotypes; // All current genotypes having haplotypes
+	Map<String, Genotypes> genotypesByVariant; // All current genotypes from only one variant (not haplotypes)
+	Set<Genotypes> haplotypes; // All current genotypes having haplotypes (consisting of more than one variant)
 
 	public HaplotypeFinder() {
-		genotypesByHaplotype = new HashMap<>();
+		genotypesByVariant = new HashMap<>();
 		haplotypes = new HashSet<>();
 	}
 
@@ -35,8 +35,12 @@ public class HaplotypeFinder {
 	 * @return A list of all new found haplotypes
 	 */
 	public Collection<Haplotype> add(Genotypes gt) {
+		update(gt);
+		if (!filter(gt.getHaplotype())) return null;
+
 		// Find new genotypes based on current ones
 		Map<Genotypes, Genotypes> newGtByOldGt = haplotypes(gt);
+		if (newGtByOldGt.isEmpty()) return null;
 
 		// Add or replace genotypes
 		boolean addGt = true;
@@ -51,41 +55,46 @@ public class HaplotypeFinder {
 						+ "\n\tOld: " + gtOld //
 						+ "\n\tNew: " + gtNew //
 				);
-				// Remove form both collections
-				haplotypes.remove(gtOld);
-				genotypesByHaplotype.remove(gtOld.getHaplotype().toString());
+				remove(gtOld);
 			}
 
+			// Add genotypes
 			haplotypes.add(gtNew);
 
-			// If one of gtNew is equal, then we should not add 'gt' by itself 
+			// If one of gtNew is equal, then we should not add 'gt' by itself
 			// (because it will be redundant)
 			addGt &= !gt.equalsGenotypes(gtNew);
 		}
 
 		// Add new entry
-		if (addGt) genotypesByHaplotype.put(gt.getHaplotype().toString(), gt);
+		if (addGt) genotypesByVariant.put(gt.getHaplotype().toString(), gt);
 
 		// Return all found haplotypes
 		if (debug) Gpr.debug(this + "\n\n");
 		Set<Haplotype> haps = new HashSet<>();
 		for (Genotypes g : newGtByOldGt.values())
 			haps.add(g.getHaplotype());
+
 		return haps;
 	}
 
-	//	void addgenotypes(Genotypes gt) {
-	//		if (debug) Gpr.debug("Adding genotype: '" + gt.getHaplotype() + "'\t" + gt);
-	//		genotypesByHaplotype.put(gt.getHaplotype().toString(), gt);
-	//	}
-
-	protected boolean filter(Variant var) {
+	/**
+	 * Filter all variants in haplotype
+	 * @return true if all variants pass filter
+	 */
+	public boolean filter(Haplotype hap) {
+		for (Variant var : hap)
+			if (!filter(var)) return false;
 		return true;
 	}
 
-	//	Genotypes getgenotypes(Haplotype hap) {
-	//		return genotypesByHaplotype.get(hap.toString());
-	//	}
+	/**
+	 * Apply a filter to a variant
+	 * @return True is variant passes filter
+	 */
+	public boolean filter(Variant var) {
+		return true;
+	}
 
 	public Set<Haplotype> getHaplotypes() {
 		Set<Haplotype> gts = new HashSet<>();
@@ -97,12 +106,12 @@ public class HaplotypeFinder {
 	/**
 	 * Find new haplotypes using current haplotypes
 	 */
-	Map<Genotypes, Genotypes> haplotypes(Genotypes genotypes) {
+	protected Map<Genotypes, Genotypes> haplotypes(Genotypes genotypes) {
 		Map<Genotypes, Genotypes> newGtByOldGt = new HashMap<>();
 
 		// Create a list of all current genotypes
 		List<Genotypes> gts = new LinkedList<>();
-		gts.addAll(genotypesByHaplotype.values());
+		gts.addAll(genotypesByVariant.values());
 		gts.addAll(haplotypes);
 
 		// Compare to all current haplotypes
@@ -124,13 +133,21 @@ public class HaplotypeFinder {
 		return !haplotypes.isEmpty();
 	}
 
+	/**
+	 * Remove genotypes form all collections
+	 */
+	protected void remove(Genotypes gt) {
+		haplotypes.remove(gt);
+		genotypesByVariant.remove(gt.getHaplotype().toString());
+	}
+
 	@Override
 	public String toString() {
 		StringBuilder sb = new StringBuilder();
 
-		sb.append("Genotype vectors: " + genotypesByHaplotype.size() + "\n");
+		sb.append("Genotype vectors: " + genotypesByVariant.size() + "\n");
 		int i = 0;
-		for (Genotypes gt : genotypesByHaplotype.values()) {
+		for (Genotypes gt : genotypesByVariant.values()) {
 			sb.append(i + "\t" + gt + "\n");
 			i++;
 		}
@@ -145,5 +162,11 @@ public class HaplotypeFinder {
 		}
 
 		return sb.toString();
+	}
+
+	/**
+	 * Update caches and remove old entries
+	 */
+	protected void update(Genotypes gt) {
 	}
 }

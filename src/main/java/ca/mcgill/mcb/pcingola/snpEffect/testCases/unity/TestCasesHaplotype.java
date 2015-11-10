@@ -203,4 +203,21 @@ public class TestCasesHaplotype {
 		checkHaplotypes(vcfFile, expected);
 	}
 
+	/**
+	 * Three consecutive variants affecting the same codon  (SNP + SNP + SNP)
+	 * Implicit phasing: All variants are homozygous ALT
+	 * Multiple samples with different genotypes create different haplotypes
+	 */
+	@Test
+	public void test_09() {
+		Gpr.debug("Test");
+		String vcfFile = "tests/haplotype_09.vcf";
+
+		Set<String> expected = new HashSet<>();
+		expected.add("7:116596741_T>A + 7:116596742_G>A + 7:116596743_T>A");
+		expected.add("7:116596741_T>A + 7:116596743_T>A");
+		expected.add("7:116596742_G>A + 7:116596743_T>A");
+		checkHaplotypes(vcfFile, expected);
+	}
+
 }

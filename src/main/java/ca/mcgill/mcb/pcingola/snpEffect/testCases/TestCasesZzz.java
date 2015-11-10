@@ -5,8 +5,6 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
-import org.junit.Test;
-
 import ca.mcgill.mcb.pcingola.fileIterator.VcfFileIterator;
 import ca.mcgill.mcb.pcingola.genotypes.Genotypes;
 import ca.mcgill.mcb.pcingola.interval.Variant;
@@ -57,7 +55,7 @@ public class TestCasesZzz {
 		// How many haplotypes have been found?
 		Set<Haplotype> haplotypes = hf.getHaplotypes();
 
-		Assert.assertEquals("One haplotype expected:" //
+		Assert.assertEquals("Mismatch on number of haplotype expected:" //
 				+ "\nExpected :\n" + setToStr(expectedAnns) //
 				+ "\nFound    :\n" + setToStr(haplotypes) //
 				, expectedAnns.size(), haplotypes.size());
@@ -112,15 +110,21 @@ public class TestCasesZzz {
 		return sb.toString();
 	}
 
-	/**
-	 * Three consecutive variants affecting the same codon  (SNP + SNP + SNP)
-	 * Implicit phasing: All variants are homozygous ALT
-	 */
-	@Test
-	public void test_07() {
-		Gpr.debug("Test");
-		String vcfFile = "tests/haplotype_07.vcf";
-		checkHaplotypes(vcfFile, "7:116596741_T>A + 7:116596742_G>A + 7:116596743_T>A");
-	}
+	//	/**
+	//	 * Three consecutive variants affecting the same codon  (SNP + SNP + SNP)
+	//	 * Implicit phasing: All variants are homozygous ALT
+	//	 * Multiple samples with different genotypes create different haplotypes
+	//	 */
+	//	@Test
+	//	public void test_09() {
+	//		Gpr.debug("Test");
+	//		String vcfFile = "tests/haplotype_09.vcf";
+	//
+	//		Set<String> expected = new HashSet<>();
+	//		expected.add("7:116596741_T>A + 7:116596742_G>A + 7:116596743_T>A");
+	//		expected.add("7:116596741_T>A + 7:116596743_T>A");
+	//		expected.add("7:116596742_G>A + 7:116596743_T>A");
+	//		checkHaplotypes(vcfFile, expected);
+	//	}
 
 }
