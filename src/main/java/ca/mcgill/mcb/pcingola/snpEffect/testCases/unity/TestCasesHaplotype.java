@@ -27,6 +27,9 @@ public class TestCasesHaplotype {
 	public TestCasesHaplotype() {
 	}
 
+	/**
+	 * Check that a set of haplotypes are found
+	 */
 	public void checkHaplotypes(String vcfFile, Set<String> expectedAnns) {
 		VcfFileIterator vcf = new VcfFileIterator(vcfFile);
 		HaplotypeFinder hf = new HaplotypeFinder();
@@ -52,23 +55,29 @@ public class TestCasesHaplotype {
 
 		// How many haplotypes have been found?
 		Set<Haplotype> haplotypes = hf.getHaplotypes();
-		Assert.assertEquals("One haplotype expected", expectedAnns.size(), haplotypes.size());
+
+		Assert.assertEquals("One haplotype expected:" //
+				+ "\nExpected :\n" + setToStr(expectedAnns) //
+				+ "\nFound    :\n" + setToStr(haplotypes) //
+				, expectedAnns.size(), haplotypes.size());
 
 		// Check that haplotypes match
-		Set<String> haplotypesStr = new HashSet<>();
-		for (Haplotype haplotype : haplotypes)
-			haplotypesStr.add(haplotype.getAnnGenotype());
-
-		Assert.assertEquals("Haplotypes do not match expected", setToStr(expectedAnns), setToStr(haplotypesStr));
+		Assert.assertEquals("Haplotypes do not match expected", setToStr(expectedAnns), setToStr(haplotypes));
 	}
 
+	/**
+	 * Check for a single haplotype
+	 */
 	public void checkHaplotypes(String vcfFile, String expectedAnnGt) {
 		HashSet<String> expectedAnns = new HashSet<>();
 		expectedAnns.add(expectedAnnGt);
 		checkHaplotypes(vcfFile, expectedAnns);
 	}
 
-	public void checkNoHaplotypes(String vcfFile, String expectedAnnGt) {
+	/**
+	 * Check that no haplotype is found
+	 */
+	public void checkNoHaplotypes(String vcfFile) {
 		VcfFileIterator vcf = new VcfFileIterator(vcfFile);
 		HaplotypeFinder hf = new HaplotypeFinder();
 
@@ -84,9 +93,15 @@ public class TestCasesHaplotype {
 		Assert.assertEquals("One haplotype expected", 0, haplotypes.size());
 	}
 
-	String setToStr(Set<String> strs) {
+	/**
+	 * Convert a set to a list of sorted strings
+	 */
+	@SuppressWarnings("rawtypes")
+	String setToStr(Set objects) {
 		ArrayList<String> list = new ArrayList<>();
-		list.addAll(strs);
+
+		for (Object o : objects)
+			list.add(o.toString());
 		Collections.sort(list);
 
 		StringBuilder sb = new StringBuilder();
@@ -104,7 +119,7 @@ public class TestCasesHaplotype {
 	public void test_01() {
 		Gpr.debug("Test");
 		String vcfFile = "tests/haplotype_01.vcf";
-		checkHaplotypes(vcfFile, "C-7:116596741_T>A");
+		checkHaplotypes(vcfFile, "7:116596741_T>A + 7:116596742_G>C");
 	}
 
 	/**
@@ -115,7 +130,7 @@ public class TestCasesHaplotype {
 	public void test_02() {
 		Gpr.debug("Test");
 		String vcfFile = "tests/haplotype_02.vcf";
-		checkHaplotypes(vcfFile, "C-7:116596741_T>A");
+		checkHaplotypes(vcfFile, "7:116596741_T>A + 7:116596742_G>C");
 	}
 
 	/**
@@ -126,7 +141,7 @@ public class TestCasesHaplotype {
 	public void test_03() {
 		Gpr.debug("Test");
 		String vcfFile = "tests/haplotype_03.vcf";
-		checkHaplotypes(vcfFile, "C-7:116596741_T>A");
+		checkHaplotypes(vcfFile, "7:116596741_T>A + 7:116596742_G>C");
 	}
 
 	/**
@@ -137,7 +152,7 @@ public class TestCasesHaplotype {
 	public void test_04() {
 		Gpr.debug("Test");
 		String vcfFile = "tests/haplotype_04.vcf";
-		checkHaplotypes(vcfFile, "C-7:116596741_T>A");
+		checkHaplotypes(vcfFile, "7:116596741_T>A + 7:116596742_G>C");
 	}
 
 	/**
@@ -148,7 +163,7 @@ public class TestCasesHaplotype {
 	public void test_05() {
 		Gpr.debug("Test");
 		String vcfFile = "tests/haplotype_05.vcf";
-		checkNoHaplotypes(vcfFile, "C-7:116596741_T>A");
+		checkNoHaplotypes(vcfFile);
 	}
 
 	/**
@@ -159,22 +174,19 @@ public class TestCasesHaplotype {
 	public void test_06() {
 		Gpr.debug("Test");
 		String vcfFile = "tests/haplotype_06.vcf";
-		checkHaplotypes(vcfFile, "AA-7:116596741_T>A");
+		checkHaplotypes(vcfFile, "7:116596741_T>A + 7:116596742_GT>AA");
 	}
 
-	//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-	//	/**
-	//	 * Three consecutive variants affecting the same codon  (SNP + SNP + SNP)
-	//	 * Implicit phasing: All variants are homozygous ALT
-	//	 */
-	//	@Test
-	//	public void test_07() {
-	//		Gpr.debug("Test");
-	//		String vcfFile = "tests/haplotype_07.vcf";
-	//		checkHaplotypes(vcfFile, "C-7:116596741_T>A");
-	//		throw new RuntimeException("INCORRECT CHECKING");
-	//	}
-	//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+	/**
+	 * Three consecutive variants affecting the same codon  (SNP + SNP + SNP)
+	 * Implicit phasing: All variants are homozygous ALT
+	 */
+	@Test
+	public void test_07() {
+		Gpr.debug("Test");
+		String vcfFile = "tests/haplotype_07.vcf";
+		checkHaplotypes(vcfFile, "7:116596741_T>A + 7:116596742_G>A + 7:116596743_T>A");
+	}
 
 	/**
 	 * Two consecutive multiallelic variants affecting the same codon
@@ -185,8 +197,8 @@ public class TestCasesHaplotype {
 		Gpr.debug("Test");
 		String vcfFile = "tests/haplotype_08.vcf";
 		Set<String> expected = new HashSet<>();
-		expected.add("C-7:116596741_T>A");
-		expected.add("C-7:116596741_T>C");
+		expected.add("7:116596741_T>A + 7:116596742_G>C");
+		expected.add("7:116596741_T>C + 7:116596742_G>C");
 
 		checkHaplotypes(vcfFile, expected);
 	}

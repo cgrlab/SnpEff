@@ -1,6 +1,6 @@
 package ca.mcgill.mcb.pcingola.vcf;
 
-import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -20,13 +20,13 @@ import ca.mcgill.mcb.pcingola.util.Gpr;
  */
 public class HaplotypeFinder {
 
-	public static boolean debug = true;
+	public static boolean debug = false;
 
-	Map<String, Genotypes> genotypesByVariant; // Genotypes indexed by variant
-	Set<Haplotype> haplotypes; // Haplotypes found so far
+	Map<String, Genotypes> genotypesByHaplotype; // All current genotypes
+	Set<Genotypes> haplotypes; // All current genotypes having haplotypes
 
 	public HaplotypeFinder() {
-		genotypesByVariant = new HashMap<>();
+		genotypesByHaplotype = new HashMap<>();
 		haplotypes = new HashSet<>();
 	}
 
@@ -34,109 +34,87 @@ public class HaplotypeFinder {
 	 * Add new genotype vector and calculate all new haplotypes
 	 * @return A list of all new found haplotypes
 	 */
-	public List<Haplotype> add(Genotypes gv) {
-		// First find all new haplotypes that can be created using this new entry
-		List<Haplotype> newhaplosGvs = haplotypesFromgenotypes(gv);
+	public Collection<Haplotype> add(Genotypes gt) {
+		// Find new genotypes based on current ones
+		Map<Genotypes, Genotypes> newGtByOldGt = haplotypes(gt);
 
-		// Find all haplotypes based on current haplotypes
-		Map<Haplotype, Haplotype> newHapsByOldHaps = haplotypesFromCurrentHaplotypes(gv);
+		// Add or replace genotypes
+		boolean addGt = true;
+		for (Genotypes gtOld : newGtByOldGt.keySet()) {
+			Genotypes gtNew = newGtByOldGt.get(gtOld);
 
-		// Add calculated haplotypes from genotypess
-		for (Haplotype hap : newhaplosGvs) {
-			haplotypes.add(hap);
-			if (debug) Gpr.debug("Adding haplotype:" + hap);
-		}
+			// We can remove the old haplotype if the genotypes match and all variants are included
+			if (gtNew.getHaplotype().containsAll(gtOld.getHaplotype()) //
+					&& gtNew.equalsGenotypes(gtOld) //
+			) {
+				if (debug) Gpr.debug("Replacing:" //
+						+ "\n\tOld: " + gtOld //
+						+ "\n\tNew: " + gtNew //
+				);
+				// Remove form both collections
+				haplotypes.remove(gtOld);
+				genotypesByHaplotype.remove(gtOld.getHaplotype().toString());
+			}
 
-		// Replace 'current' haplotypes by new ones in 'haplotypes'
-		for (Haplotype hapOld : newHapsByOldHaps.keySet()) {
-			Haplotype hapNew = newHapsByOldHaps.get(hapOld);
-			haplotypes.remove(hapOld);
-			haplotypes.add(hapNew);
-			if (debug) Gpr.debug("Replacing haplotypes:" //
-					+ "\n\tOld haplotype: " + hapOld //
-					+ "\n\tNew haplotype: " + hapNew //
-			);
+			haplotypes.add(gtNew);
+
+			// If one of gtNew is equal, then we should not add 'gt' by itself 
+			// (because it will be redundant)
+			addGt &= !gt.equalsGenotypes(gtNew);
 		}
 
 		// Add new entry
-		addgenotypes(gv);
+		if (addGt) genotypesByHaplotype.put(gt.getHaplotype().toString(), gt);
 
 		// Return all found haplotypes
 		if (debug) Gpr.debug(this + "\n\n");
-		newhaplosGvs.addAll(newHapsByOldHaps.values());
-		return newhaplosGvs;
+		Set<Haplotype> haps = new HashSet<>();
+		for (Genotypes g : newGtByOldGt.values())
+			haps.add(g.getHaplotype());
+		return haps;
 	}
 
-	void addgenotypes(Genotypes gv) {
-		if (debug) Gpr.debug("Adding genotype: '" + toString(gv.getVariant()) + "'\t" + gv);
-		genotypesByVariant.put(toString(gv.getVariant()), gv);
-	}
+	//	void addgenotypes(Genotypes gt) {
+	//		if (debug) Gpr.debug("Adding genotype: '" + gt.getHaplotype() + "'\t" + gt);
+	//		genotypesByHaplotype.put(gt.getHaplotype().toString(), gt);
+	//	}
 
 	protected boolean filter(Variant var) {
 		return true;
 	}
 
-	Genotypes getgenotypes(Variant variant) {
-		return genotypesByVariant.get(toString(variant));
-	}
+	//	Genotypes getgenotypes(Haplotype hap) {
+	//		return genotypesByHaplotype.get(hap.toString());
+	//	}
 
 	public Set<Haplotype> getHaplotypes() {
-		return haplotypes;
+		Set<Haplotype> gts = new HashSet<>();
+		for (Genotypes gt : haplotypes)
+			gts.add(gt.getHaplotype());
+		return gts;
 	}
 
 	/**
 	 * Find new haplotypes using current haplotypes
 	 */
-	Map<Haplotype, Haplotype> haplotypesFromCurrentHaplotypes(Genotypes genotypes) {
-		Map<Haplotype, Haplotype> newHapByOldHap = new HashMap<>();
+	Map<Genotypes, Genotypes> haplotypes(Genotypes genotypes) {
+		Map<Genotypes, Genotypes> newGtByOldGt = new HashMap<>();
+
+		// Create a list of all current genotypes
+		List<Genotypes> gts = new LinkedList<>();
+		gts.addAll(genotypesByHaplotype.values());
+		gts.addAll(haplotypes);
 
 		// Compare to all current haplotypes
-		for (Haplotype hapOld : haplotypes) {
-			if (debug) Gpr.debug("Analyzing haplotye: " + hapOld);
-
-			// Create a list of genotypes form all variants in 'hap'
-			List<Genotypes> gvs = new ArrayList<>();
-			for (Variant var : hapOld) {
-				Genotypes gv = getgenotypes(var);
-				if (gv == null) throw new RuntimeException("Could not find genotypes for variant " + toString(var));
-				gvs.add(getgenotypes(var));
-			}
+		for (Genotypes gtOld : gts) {
+			if (debug) Gpr.debug("Analyzing genotype: " + gtOld);
 
 			// Now check if there is a new haplotype
-			Genotypes gvRes = genotypes.haplotype(gvs);
-			if (gvRes != null) {
-				// Create new haplotype with all the variants
-				Haplotype hapNew = new Haplotype();
-				hapNew.add(genotypes.getVariant());
-				for (Genotypes gv : gvs)
-					hapNew.add(gv.getVariant());
-
-				newHapByOldHap.put(hapOld, hapNew);
-			}
+			Genotypes gtNew = genotypes.haplotype(gtOld);
+			if (gtNew != null) newGtByOldGt.put(gtOld, gtNew);
 		}
 
-		return newHapByOldHap;
-	}
-
-	/**
-	 * Find new haplotypes using genotypes from 'genotypes'
-	 */
-	List<Haplotype> haplotypesFromgenotypes(Genotypes genotypes) {
-		List<Haplotype> haplotypes = new LinkedList<>();
-
-		// Compare to all current genotypess
-		for (Genotypes gv : genotypesByVariant.values()) {
-			Genotypes gvRes = genotypes.haplotype(gv);
-
-			if (gvRes != null) {
-				Haplotype h = new Haplotype();
-				h.add(gv.getVariant());
-				h.add(genotypes.getVariant());
-				haplotypes.add(h);
-			}
-		}
-
-		return haplotypes;
+		return newGtByOldGt;
 	}
 
 	/**
@@ -150,31 +128,22 @@ public class HaplotypeFinder {
 	public String toString() {
 		StringBuilder sb = new StringBuilder();
 
-		sb.append("Genotype vectors: " + genotypesByVariant.size() + "\n");
+		sb.append("Genotype vectors: " + genotypesByHaplotype.size() + "\n");
 		int i = 0;
-		for (Genotypes g : genotypesByVariant.values()) {
-			sb.append(i + "\t" + g + "\n");
+		for (Genotypes gt : genotypesByHaplotype.values()) {
+			sb.append(i + "\t" + gt + "\n");
 			i++;
 		}
 
 		if (!haplotypes.isEmpty()) {
 			sb.append("Haplotypes: " + haplotypes.size() + "\n");
 			i = 0;
-			for (Haplotype h : haplotypes) {
-				sb.append(i + "\t" + h + "\n");
+			for (Genotypes gt : haplotypes) {
+				sb.append(i + "\t" + gt + "\n");
 				i++;
 			}
 		}
 
 		return sb.toString();
 	}
-
-	String toString(Variant var) {
-		return var.getChromosomeName() //
-				+ ":" + var.getStart()//
-				+ "_" + var.getReference() //
-				+ "/" + var.getAlt() //
-				;
-	}
-
 }

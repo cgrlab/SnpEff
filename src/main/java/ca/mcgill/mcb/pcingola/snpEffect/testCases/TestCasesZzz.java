@@ -120,8 +120,7 @@ public class TestCasesZzz {
 	public void test_07() {
 		Gpr.debug("Test");
 		String vcfFile = "tests/haplotype_07.vcf";
-		checkHaplotypes(vcfFile, "C-7:116596741_T>A");
-		throw new RuntimeException("INCORRECT CHECKING");
+		checkHaplotypes(vcfFile, "7:116596741_T>A + 7:116596742_G>A + 7:116596743_T>A");
 	}
 
 }

@@ -6,6 +6,7 @@ import java.util.List;
 
 import ca.mcgill.mcb.pcingola.interval.Variant;
 import ca.mcgill.mcb.pcingola.util.Gpr;
+import ca.mcgill.mcb.pcingola.vcf.Haplotype;
 import ca.mcgill.mcb.pcingola.vcf.VcfEntry;
 import ca.mcgill.mcb.pcingola.vcf.VcfGenotype;
 
@@ -40,7 +41,7 @@ public class Genotypes implements Serializable {
 
 	byte genotype[];
 	boolean haploid; // True if haploid, false if diploid
-	Variant variant;
+	Haplotype haplotype;
 
 	public Genotypes(int size) {
 		init(size);
@@ -66,41 +67,47 @@ public class Genotypes implements Serializable {
 	}
 
 	/**
-	 * Calculate the resulting genotype vector after applying 'gv'
+	 * Calculate the resulting genotype vector after applying 'gt'
 	 */
-	protected Genotypes calcGenotypeVector(Genotypes gv) {
+	protected Genotypes calcGenotypeVector(Genotypes gt) {
+		// Create new genotypes
 		int size = size();
-		Genotypes newGv = new Genotypes(size);
+		Genotypes newGs = new Genotypes(size);
 
-		if (!isHaploid() && !gv.isHaploid()) {
-			newGv.setPloidy(DIPLOID);
+		// Update haplotype
+		Haplotype newHap = newGs.getHaplotype();
+		newHap.add(this.getHaplotype());
+		newHap.add(gt.getHaplotype());
+
+		if (!isHaploid() && !gt.isHaploid()) {
+			newGs.setPloidy(DIPLOID);
 
 			// Both are diploid genomes
 			for (int i = 0; i < size; i++) {
 				byte gt0 = getCode(i);
-				byte gt1 = gv.getCode(i);
+				byte gt1 = gt.getCode(i);
 
 				if (isPhased(gt0) && isPhased(gt1)) {
 					// At least one bit remains the same in both genotypes
 					// (i.e. one genotype is the same)
 					// Note: We implicitly use the fact that missing
 					// genotypes are set to zero.
-					newGv.set(i, (byte) (gt0 & gt1));
+					newGs.set(i, (byte) (gt0 & gt1));
 				} else {
 					// We need the same condition as in 'phased', but also
 					// at least one of them to be homozygous-ALT
-					if (isHomozygousAlt(gt0) || isHomozygousAlt(gt1)) newGv.set(i, (byte) (gt0 & gt1));
+					if (isHomozygousAlt(gt0) || isHomozygousAlt(gt1)) newGs.set(i, (byte) (gt0 & gt1));
 				}
 			}
-		} else if (isHaploid() && gv.isHaploid()) {
-			newGv.setPloidy(HAPLOID);
+		} else if (isHaploid() && gt.isHaploid()) {
+			newGs.setPloidy(HAPLOID);
 
 			// Both are haploid genomes: Any matching non-ref is implicitly
 			// phased since these are haploid chromosomes
 			for (int i = 0; i < size; i++) {
 				int gt0 = getCode(i) & GT_MASK;
-				int gt1 = gv.getCode(i) & GT_MASK;
-				if (gt0 != 0 && gt1 != 0) newGv.set(i, (byte) 1);
+				int gt1 = gt.getCode(i) & GT_MASK;
+				if (gt0 != 0 && gt1 != 0) newGs.set(i, (byte) 1);
 			}
 		} else {
 			// One is haploid and the other is diploid
@@ -109,11 +116,21 @@ public class Genotypes implements Serializable {
 			// I'm not sure if this is compliant with the VCF spec.)
 			throw new RuntimeException("Genotype verctors have different zygosity?" //
 					+ "\n\t" + this //
-					+ "\n\t" + gv //
+					+ "\n\t" + gt //
 			);
 		}
 
-		return newGv;
+		return newGs;
+	}
+
+	/**
+	 * Compare all genotypes
+	 */
+	public boolean equalsGenotypes(Genotypes gt) {
+		int size = size();
+		for (int i = 0; i < size; i++)
+			if ((genotype[i] & GT_MASK) != (gt.genotype[i] & GT_MASK)) return false;
+		return true;
 	}
 
 	/**
@@ -208,39 +225,43 @@ public class Genotypes implements Serializable {
 		return code;
 	}
 
-	public Variant getVariant() {
-		return variant;
+	//	public Variant getVariant() {
+	//		return variant;
+	//	}
+
+	public Haplotype getHaplotype() {
+		return haplotype;
 	}
 
 	/**
-	 * Can this genotype conform a haplotype with all the genotypes in 'gvs'?
+	 * Can this genotype conform a haplotype with all the genotypes in 'gts'?
 	 * @return The resulting genotype on success, null otherwise
 	 */
-	public Genotypes haplotype(Collection<Genotypes> gvs) {
-		Genotypes gvResult = this;
+	public Genotypes haplotype(Collection<Genotypes> gts) {
+		Genotypes gtResult = this;
 
-		for (Genotypes gv : gvs) {
-			gvResult = gvResult.calcGenotypeVector(gv);
-			Gpr.debug("Calculated genotype: " + gvResult);
-			if (gvResult.allRef()) return null; // All entries are 'REF'? There is nothing else to do
+		for (Genotypes gt : gts) {
+			gtResult = gtResult.calcGenotypeVector(gt);
+			Gpr.debug("Calculated genotype: " + gtResult);
+			if (gtResult.allRef()) return null; // All entries are 'REF'? There is nothing else to do
 		}
 
-		return gvResult;
+		return gtResult;
 	}
 
 	/**
-	 * Can this genotype conform a haplotype with genotype 'gv' ?
+	 * Can this genotype conform a haplotype with genotype 'gt' ?
 	 * @return The resulting genotype on success, null otherwise
 	 */
-	public Genotypes haplotype(Genotypes gv) {
-		Genotypes gvResult = this.calcGenotypeVector(gv);
-		Gpr.debug("Calculated genotype: " + gvResult);
-		if (gvResult.allRef()) return null; // All entries are 'REF'? There is nothing else to do
-		return gvResult;
+	public Genotypes haplotype(Genotypes gt) {
+		Genotypes gtResult = this.calcGenotypeVector(gt);
+		if (gtResult.allRef()) return null; // All entries are 'REF'? There is nothing else to do
+		return gtResult;
 	}
 
 	protected void init(int size) {
 		genotype = new byte[size];
+		haplotype = new Haplotype();
 	}
 
 	public boolean isHaploid() {
@@ -291,12 +312,10 @@ public class Genotypes implements Serializable {
 	void set(VcfEntry ve) {
 		if (ve.isMultiallelic()) throw new RuntimeException("Cannot add ulti-allelic VCF entries without specifiying an 'ALT'");
 
-		// Set variant
-		variant = ve.variants().get(0);
-
 		// Initialize
 		List<VcfGenotype> gts = ve.getVcfGenotypes();
 		init(gts.size());
+		haplotype.add(ve.variants().get(0));
 
 		// Set genotypes
 		int i = 0;
@@ -311,6 +330,7 @@ public class Genotypes implements Serializable {
 
 	public void set(VcfEntry ve, String alt) {
 		// Find corresponding variant
+		Variant variant = null;
 		for (Variant var : ve.variants())
 			if (var.getGenotype().equalsIgnoreCase(alt)) {
 				variant = var;
@@ -321,6 +341,7 @@ public class Genotypes implements Serializable {
 		// Initialize
 		List<VcfGenotype> gts = ve.getVcfGenotypes();
 		init(gts.size());
+		haplotype.add(variant);
 
 		// Set genotypes
 		int i = 0;
@@ -358,9 +379,15 @@ public class Genotypes implements Serializable {
 		StringBuilder sb = new StringBuilder();
 
 		int size = size();
-		sb.append("Variant: ");
-		if (variant != null) sb.append(variant.getChromosomeName() + ":" + (variant.getStart() + 1) + "_" + variant.getReference() + ">" + variant.getAlt());
-		else sb.append("null");
+		if (haplotype == null) {
+			sb.append("null");
+		} else if (haplotype.size() == 1) {
+			sb.append("Variant: ");
+			Variant variant = haplotype.getVariants().get(0);
+			sb.append(variant.getChromosomeName() + ":" + (variant.getStart() + 1) + "_" + variant.getReference() + ">" + variant.getAlt());
+		} else {
+			sb.append("Haplotype: " + haplotype);
+		}
 
 		sb.append(", " + (haploid ? "haploid" : "diploid"));
 		sb.append(", size:" + size);
@@ -368,20 +395,6 @@ public class Genotypes implements Serializable {
 
 		for (int i = 0; i < size; i++)
 			sb.append(" " + get(i));
-
-		return sb.toString();
-	}
-
-	/**
-	 * Return a string where position values are {0,1} depending
-	 * on whether the genotype is homozygous REF or not
-	 */
-	public String toStringNonRef() {
-		StringBuilder sb = new StringBuilder();
-
-		int size = size();
-		for (int i = 0; i < size; i++)
-			sb.append(isHomozygousRef(genotype[i]) ? "0" : "1");
 
 		return sb.toString();
 	}

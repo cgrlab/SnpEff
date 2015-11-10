@@ -22,6 +22,10 @@ public class Haplotype implements Iterable<Variant> {
 		variants = new ArrayList<Variant>();
 	}
 
+	public void add(Haplotype haplotype) {
+		variants.addAll(haplotype.getVariants());
+	}
+
 	public void add(Variant var) {
 		variants.add(var);
 	}
@@ -41,6 +45,13 @@ public class Haplotype implements Iterable<Variant> {
 			}
 
 		return marker;
+	}
+
+	/**
+	 * Does this haplotype contain all variants in 'hap'?
+	 */
+	public boolean containsAll(Haplotype hap) {
+		return variants.containsAll(hap.variants);
 	}
 
 	/**
@@ -67,7 +78,7 @@ public class Haplotype implements Iterable<Variant> {
 		return sb.toString();
 	}
 
-	public List<Variant> getHaplotype() {
+	public List<Variant> getVariants() {
 		return variants;
 	}
 
@@ -76,9 +87,25 @@ public class Haplotype implements Iterable<Variant> {
 		return variants.iterator();
 	}
 
+	public int size() {
+		return variants.size();
+	}
+
 	@Override
 	public String toString() {
-		return getAnnGenotype();
+		Collections.sort(variants);
+
+		StringBuilder sb = new StringBuilder();
+		for (Variant var : variants) {
+			if (sb.length() > 0) sb.append(" + ");
+			sb.append(var.getChromosomeName() //
+					+ ":" + (var.getStart() + 1) //
+					+ "_" + var.getReference() //
+					+ ">" + var.getAlt()) //
+					;
+		}
+
+		return sb.toString();
 	}
 
 }
