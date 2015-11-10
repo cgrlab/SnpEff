@@ -1,9 +1,11 @@
 package ca.mcgill.mcb.pcingola.genotypes;
 
 import java.io.Serializable;
+import java.util.Collection;
 import java.util.List;
 
 import ca.mcgill.mcb.pcingola.interval.Variant;
+import ca.mcgill.mcb.pcingola.util.Gpr;
 import ca.mcgill.mcb.pcingola.vcf.VcfEntry;
 import ca.mcgill.mcb.pcingola.vcf.VcfGenotype;
 
@@ -30,6 +32,9 @@ public class GenotypeVector implements Serializable {
 	protected static final byte MISSING_MASK = (byte) 0x40;
 	protected static final byte GT_MASK = (byte) 0x03;
 
+	protected static final int HAPLOID = 1;
+	protected static final int DIPLOID = 2;
+
 	private static final long serialVersionUID = 4734574592894281057L;
 
 	byte genotype[];
@@ -46,6 +51,68 @@ public class GenotypeVector implements Serializable {
 
 	public GenotypeVector(VcfEntry ve, String alt) {
 		set(ve, alt);
+	}
+
+	/**
+	 * Are all genotypes 'REF'?
+	 */
+	public boolean allRef() {
+		int size = size();
+		for (int i = 0; i < size; i++)
+			if (!isHomozygousRef(genotype[i])) return false;
+
+		return true;
+	}
+
+	/**
+	 * Calculate the resulting genotype vector after applying 'gv'
+	 */
+	public GenotypeVector calcGenotypeVector(GenotypeVector gv) {
+		int size = size();
+		GenotypeVector newGv = new GenotypeVector(size);
+
+		if (!isHaploid() && !gv.isHaploid()) {
+			newGv.setPloidy(DIPLOID);
+
+			// Both are diploid genomes
+			for (int i = 0; i < size; i++) {
+				byte gt0 = getCode(i);
+				byte gt1 = gv.getCode(i);
+
+				if (isPhased(gt0) && isPhased(gt1)) {
+					// At least one bit remains the same in both genotypes
+					// (i.e. one genotype is the same)
+					// Note: We implicitly use the fact that missing
+					// genotypes are set to zero.
+					newGv.set(i, (byte) (gt0 & gt1));
+				} else {
+					// We need the same condition as in 'phased', but also
+					// at least one of them to be homozygous-ALT
+					if (isHomozygousAlt(gt0) || isHomozygousAlt(gt1)) newGv.set(i, (byte) (gt0 & gt1));
+				}
+			}
+		} else if (isHaploid() && gv.isHaploid()) {
+			newGv.setPloidy(HAPLOID);
+
+			// Both are haploid genomes: Any matching non-ref is implicitly
+			// phased since these are haploid chromosomes
+			for (int i = 0; i < size; i++) {
+				int gt0 = getCode(i) & GT_MASK;
+				int gt1 = gv.getCode(i) & GT_MASK;
+				if (gt0 != 0 && gt1 != 0) newGv.set(i, (byte) 1);
+			}
+		} else {
+			// One is haploid and the other is diploid
+			// This is a weird case.
+			// Also, may be a this implies a loss of heterozygosity
+			// I'm not sure if this is compliant with the VCF spec.)
+			throw new RuntimeException("Genotype verctors have different zygosity?" //
+					+ "\n\t" + this //
+					+ "\n\t" + gv //
+			);
+		}
+
+		return newGv;
 	}
 
 	/**
@@ -147,6 +214,21 @@ public class GenotypeVector implements Serializable {
 	/**
 	 * Is there a matching haplotype with 'gv'
 	 */
+	public boolean hasHaplotype(Collection<GenotypeVector> gvs) {
+		GenotypeVector gvResult = this;
+
+		for (GenotypeVector gv : gvs) {
+			gvResult = gvResult.calcGenotypeVector(gv);
+			Gpr.debug("Calculated genotype: " + gvResult);
+			if (gvResult.allRef()) return false; // All entries are 'REF'? There is nothing else to do
+		}
+
+		return true;
+	}
+
+	/**
+	 * Is there a matching haplotype with 'gv'
+	 */
 	public boolean hasHaplotype(GenotypeVector gv) {
 		int size = size();
 
@@ -203,6 +285,10 @@ public class GenotypeVector implements Serializable {
 
 	boolean isHomozygousAlt(byte gtCode) {
 		return (gtCode & GT_MASK) == GT_MASK;
+	}
+
+	boolean isHomozygousRef(byte gtCode) {
+		return (gtCode & GT_MASK) == 0;
 	}
 
 	boolean isMissing(byte gtCode) {
@@ -318,6 +404,20 @@ public class GenotypeVector implements Serializable {
 
 		for (int i = 0; i < size; i++)
 			sb.append(" " + get(i));
+
+		return sb.toString();
+	}
+
+	/**
+	 * Return a string where position values are {0,1} depending
+	 * on whether the genotype is homozygous REF or not
+	 */
+	public String toStringNonRef() {
+		StringBuilder sb = new StringBuilder();
+
+		int size = size();
+		for (int i = 0; i < size; i++)
+			sb.append(isHomozygousRef(genotype[i]) ? "0" : "1");
 
 		return sb.toString();
 	}

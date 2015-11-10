@@ -2,6 +2,7 @@ package ca.mcgill.mcb.pcingola.vcf;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 
 import ca.mcgill.mcb.pcingola.interval.Marker;
@@ -13,7 +14,7 @@ import ca.mcgill.mcb.pcingola.interval.Variant;
  *
  * @author pcingola
  */
-public class Haplotype {
+public class Haplotype implements Iterable<Variant> {
 
 	List<Variant> variants;
 
@@ -68,6 +69,16 @@ public class Haplotype {
 
 	public List<Variant> getHaplotype() {
 		return variants;
+	}
+
+	@Override
+	public Iterator<Variant> iterator() {
+		return variants.iterator();
+	}
+
+	@Override
+	public String toString() {
+		return getAnnGenotype();
 	}
 
 }

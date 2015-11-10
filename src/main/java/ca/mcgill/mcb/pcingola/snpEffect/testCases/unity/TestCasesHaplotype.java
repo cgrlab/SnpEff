@@ -3,7 +3,6 @@ package ca.mcgill.mcb.pcingola.snpEffect.testCases.unity;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
 import org.junit.Test;
@@ -28,12 +27,6 @@ public class TestCasesHaplotype {
 	public TestCasesHaplotype() {
 	}
 
-	public void checkHaplotypes(String vcfFile, String expectedAnnGt) {
-		HashSet<String> expectedAnns = new HashSet<>();
-		expectedAnns.add(expectedAnnGt);
-		checkHaplotypes(vcfFile, expectedAnns);
-	}
-
 	public void checkHaplotypes(String vcfFile, Set<String> expectedAnns) {
 		VcfFileIterator vcf = new VcfFileIterator(vcfFile);
 		HaplotypeFinder hf = new HaplotypeFinder();
@@ -55,10 +48,10 @@ public class TestCasesHaplotype {
 		}
 
 		// Are there any haplotypes?
-		Assert.assertTrue("No haplotype found", hf.hasHaplotype());
+		Assert.assertTrue("No haplotype found", hf.hasHaplotypes());
 
 		// How many haplotypes have been found?
-		List<Haplotype> haplotypes = hf.haplotypes();
+		Set<Haplotype> haplotypes = hf.getHaplotypes();
 		Assert.assertEquals("One haplotype expected", expectedAnns.size(), haplotypes.size());
 
 		// Check that haplotypes match
@@ -69,16 +62,10 @@ public class TestCasesHaplotype {
 		Assert.assertEquals("Haplotypes do not match expected", setToStr(expectedAnns), setToStr(haplotypesStr));
 	}
 
-	String setToStr(Set<String> strs) {
-		ArrayList<String> list = new ArrayList<>();
-		list.addAll(strs);
-		Collections.sort(list);
-
-		StringBuilder sb = new StringBuilder();
-		for (String s : list)
-			sb.append("\t" + s + "\n");
-
-		return sb.toString();
+	public void checkHaplotypes(String vcfFile, String expectedAnnGt) {
+		HashSet<String> expectedAnns = new HashSet<>();
+		expectedAnns.add(expectedAnnGt);
+		checkHaplotypes(vcfFile, expectedAnns);
 	}
 
 	public void checkNoHaplotypes(String vcfFile, String expectedAnnGt) {
@@ -91,10 +78,22 @@ public class TestCasesHaplotype {
 			hf.add(gv);
 		}
 
-		Assert.assertFalse("Haplotype found (none expected)", hf.hasHaplotype());
+		Assert.assertFalse("Haplotype found (none expected)", hf.hasHaplotypes());
 
-		List<Haplotype> haplotypes = hf.haplotypes();
+		Set<Haplotype> haplotypes = hf.getHaplotypes();
 		Assert.assertEquals("One haplotype expected", 0, haplotypes.size());
+	}
+
+	String setToStr(Set<String> strs) {
+		ArrayList<String> list = new ArrayList<>();
+		list.addAll(strs);
+		Collections.sort(list);
+
+		StringBuilder sb = new StringBuilder();
+		for (String s : list)
+			sb.append("\t" + s + "\n");
+
+		return sb.toString();
 	}
 
 	/**
@@ -178,7 +177,7 @@ public class TestCasesHaplotype {
 	//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 	/**
-	 * Two consecutive multiallelic variants affecting the same codon 
+	 * Two consecutive multiallelic variants affecting the same codon
 	 * Implicit phasing: All variants are homozygous ALT
 	 */
 	@Test
