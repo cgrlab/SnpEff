@@ -2,6 +2,8 @@ package ca.mcgill.mcb.pcingola.snpEffect.testCases;
 
 import java.util.List;
 
+import org.junit.Test;
+
 import ca.mcgill.mcb.pcingola.fileIterator.VcfFileIterator;
 import ca.mcgill.mcb.pcingola.genotypes.GenotypeVector;
 import ca.mcgill.mcb.pcingola.util.Gpr;
@@ -57,7 +59,6 @@ public class TestCasesZzz {
 		Assert.assertEquals("One haplotype expected", 0, haplotypes.size());
 	}
 
-	//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 	//	/**
 	//	 * Three consecutive variants affecting the same codon  (SNP + SNP + SNP)
 	//	 * Implicit phasing: All variants are homozygous ALT
@@ -69,18 +70,17 @@ public class TestCasesZzz {
 	//		checkHaplotypes(vcfFile, "C-7:116596741_T>A");
 	//		throw new RuntimeException("INCORRECT CHECKING");
 	//	}
-	//
-	//	/**
-	//	 * Two consecutive multiallelic variants affecting the same codon 
-	//	 * Implicit phasing: All variants are homozygous ALT
-	//	 */
-	//	@Test
-	//	public void test_08() {
-	//		Gpr.debug("Test");
-	//		String vcfFile = "tests/haplotype_08.vcf";
-	//		checkHaplotypes(vcfFile, "C-7:116596741_T>A");
-	//		throw new RuntimeException("INCORRECT CHECKING");
-	//	}
-	//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+	/**
+	 * Two consecutive multiallelic variants affecting the same codon 
+	 * Implicit phasing: All variants are homozygous ALT
+	 */
+	@Test
+	public void test_08() {
+		Gpr.debug("Test");
+		String vcfFile = "tests/haplotype_08.vcf";
+		checkHaplotypes(vcfFile, "C-7:116596741_T>A");
+		throw new RuntimeException("INCORRECT CHECKING");
+	}
 
 }
