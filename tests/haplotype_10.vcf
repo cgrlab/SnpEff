@@ -1,0 +1,9 @@
+#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	SAMP1
+chr1	1	.	A	G	.	.	.	GT	0/1
+chr1	2	.	A	G	.	.	.	GT	1|1
+chr1	3	.	A	G	.	.	.	GT	0|1
+chr1	4	.	A	G	.	.	.	GT	0/1
+chr1	5	.	A	G	.	.	.	GT	0|1
+chr1	6	.	A	G	.	.	.	GT	0/1
+chr1	7	.	A	G	.	.	.	GT	0|1
+chr1	8	.	A	G	.	.	.	GT	0|1

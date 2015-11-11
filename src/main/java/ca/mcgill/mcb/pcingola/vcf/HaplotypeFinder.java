@@ -20,7 +20,7 @@ import ca.mcgill.mcb.pcingola.util.Gpr;
  */
 public class HaplotypeFinder {
 
-	public static boolean debug = false;
+	public static boolean debug = true;
 
 	Map<String, Genotypes> genotypesByVariant; // All current genotypes from only one variant (not haplotypes)
 	Set<Genotypes> haplotypes; // All current genotypes having haplotypes (consisting of more than one variant)
@@ -28,6 +28,24 @@ public class HaplotypeFinder {
 	public HaplotypeFinder() {
 		genotypesByVariant = new HashMap<>();
 		haplotypes = new HashSet<>();
+	}
+
+	// Add genotypes to 'haplotypes' collection
+	void addHaplotypes(Genotypes gtNew) {
+		haplotypes.add(gtNew);
+	}
+
+	void addGenotype(Genotypes gt) {
+		genotypesByVariant.put(gt.getHaplotype().toString(), gt);
+	}
+
+	void replace(Genotypes gtOld, Genotypes gtNew) {
+		if (debug) Gpr.debug("Replacing:" //
+				+ "\n\tOld: " + gtOld //
+				+ "\n\tNew: " + gtNew //
+		);
+		remove(gtOld);
+		addHaplotypes(gtNew); // Add genotypes
 	}
 
 	/**
@@ -40,26 +58,20 @@ public class HaplotypeFinder {
 
 		// Find new genotypes based on current ones
 		Map<Genotypes, Genotypes> newGtByOldGt = haplotypes(gt);
-		if (newGtByOldGt.isEmpty()) return null;
+		if (newGtByOldGt.isEmpty()) {
+			addGenotype(gt);
+			return null;
+		}
 
 		// Add or replace genotypes
 		boolean addGt = true;
 		for (Genotypes gtOld : newGtByOldGt.keySet()) {
 			Genotypes gtNew = newGtByOldGt.get(gtOld);
 
-			// We can remove the old haplotype if the genotypes match and all variants are included
-			if (gtNew.getHaplotype().containsAll(gtOld.getHaplotype()) //
-					&& gtNew.equalsGenotypes(gtOld) //
-			) {
-				if (debug) Gpr.debug("Replacing:" //
-						+ "\n\tOld: " + gtOld //
-						+ "\n\tNew: " + gtNew //
-				);
-				remove(gtOld);
-			}
-
-			// Add genotypes
-			haplotypes.add(gtNew);
+			// We can replace the old haplotype if the genotypes match and all variants are included
+			if (gtNew.getHaplotype().containsAll(gtOld.getHaplotype()) && gtNew.equalsGenotypes(gtOld)) {
+				replace(gtOld, gtNew);
+			} else addHaplotypes(gtNew); // Don't replace, just add
 
 			// If one of gtNew is equal, then we should not add 'gt' by itself
 			// (because it will be redundant)
@@ -67,7 +79,7 @@ public class HaplotypeFinder {
 		}
 
 		// Add new entry
-		if (addGt) genotypesByVariant.put(gt.getHaplotype().toString(), gt);
+		if (addGt) addGenotype(gt);
 
 		// Return all found haplotypes
 		if (debug) Gpr.debug(this + "\n\n");

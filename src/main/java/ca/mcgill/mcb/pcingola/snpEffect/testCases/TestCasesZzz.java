@@ -1,9 +1,12 @@
 package ca.mcgill.mcb.pcingola.snpEffect.testCases;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
+
+import org.junit.Test;
 
 import ca.mcgill.mcb.pcingola.fileIterator.VcfFileIterator;
 import ca.mcgill.mcb.pcingola.genotypes.Genotypes;
@@ -40,7 +43,14 @@ public class TestCasesZzz {
 					String alt = var.getGenotype();
 					Genotypes gv = new Genotypes(ve, var.getGenotype());
 					if (verbose) Gpr.debug("\tAlt: '" + alt + "'\tGenotype vector: " + gv);
-					hf.add(gv);
+
+					Collection<Haplotype> haps = hf.add(gv);
+
+					if (verbose & haps != null) {
+						Gpr.debug("Haplotypes found:");
+						for (Haplotype hap : haps)
+							System.err.println("\t" + hap);
+					}
 				}
 			} else {
 				Genotypes gv = new Genotypes(ve);
@@ -110,20 +120,31 @@ public class TestCasesZzz {
 		return sb.toString();
 	}
 
+	/**
+	 * GATK's read backed phasing
+	 * Example from http://gatkforums.broadinstitute.org/discussion/45/purpose-and-operation-of-read-backed-phasing
+	 */
+	@Test
+	public void test_10() {
+		Gpr.debug("Test");
+		String vcfFile = "tests/haplotype_10.vcf";
+
+		Set<String> expected = new HashSet<>();
+		expected.add("7:116596741_T>A + 7:116596742_G>A + 7:116596743_T>A");
+		checkHaplotypes(vcfFile, expected);
+	}
+
 	//	/**
-	//	 * Three consecutive variants affecting the same codon  (SNP + SNP + SNP)
-	//	 * Implicit phasing: All variants are homozygous ALT
-	//	 * Multiple samples with different genotypes create different haplotypes
+	//	 * GATK's read backed phasing
+	//	 * Example from http://gatkforums.broadinstitute.org/discussion/45/purpose-and-operation-of-read-backed-phasing
 	//	 */
 	//	@Test
-	//	public void test_09() {
+	//	public void test_11() {
 	//		Gpr.debug("Test");
-	//		String vcfFile = "tests/haplotype_09.vcf";
+	//		String vcfFile = "tests/haplotype_11.vcf";
 	//
 	//		Set<String> expected = new HashSet<>();
 	//		expected.add("7:116596741_T>A + 7:116596742_G>A + 7:116596743_T>A");
-	//		expected.add("7:116596741_T>A + 7:116596743_T>A");
-	//		expected.add("7:116596742_G>A + 7:116596743_T>A");
 	//		checkHaplotypes(vcfFile, expected);
 	//	}
 
