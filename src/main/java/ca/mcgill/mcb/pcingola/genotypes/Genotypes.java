@@ -67,9 +67,16 @@ public class Genotypes implements Serializable {
 	}
 
 	/**
-	 * Calculate the resulting genotype vector after applying 'gt'
+	 * Calculate the resulting genotype when combining with 
+	 * the previous entry 'gtOld'.
 	 */
-	protected Genotypes calcGenotypeVector(Genotypes gt) {
+	protected Genotypes calcGenotypeVector(Genotypes gtOld) {
+		if (gtOld.getHaplotype().getLastStart() > getHaplotype().getFirstStart()) //
+			throw new RuntimeException("Haplotype sort order reversed!" //
+					+ "\n\tthis  :" + getHaplotype() //
+					+ "\n\tgtOld :" + gtOld.getHaplotype() //
+		);
+
 		// Create new genotypes
 		int size = size();
 		Genotypes newGs = new Genotypes(size);
@@ -77,36 +84,41 @@ public class Genotypes implements Serializable {
 		// Update haplotype
 		Haplotype newHap = newGs.getHaplotype();
 		newHap.add(this.getHaplotype());
-		newHap.add(gt.getHaplotype());
+		newHap.add(gtOld.getHaplotype());
 
-		if (!isHaploid() && !gt.isHaploid()) {
+		if (!isHaploid() && !gtOld.isHaploid()) {
 			newGs.setPloidy(DIPLOID);
 
 			// Both are diploid genomes
 			for (int i = 0; i < size; i++) {
-				byte gt0 = getCode(i);
-				byte gt1 = gt.getCode(i);
+				byte gtCode0 = gtOld.getCode(i);
+				byte gtCode1 = getCode(i);
 
-				if (isPhased(gt0) && isPhased(gt1)) {
+				if (isPhased(gtCode0) && isPhased(gtCode1)) {
 					// At least one bit remains the same in both genotypes
 					// (i.e. one genotype is the same)
-					// Note: We implicitly use the fact that missing
-					// genotypes are set to zero.
-					newGs.set(i, (byte) (gt0 & gt1));
+					newGs.set(i, (byte) (PHASED_MASK | (gtCode0 & gtCode1)));
+				} else if (!isPhased(gtCode0) && isPhased(gtCode1)) {
+					// Old genotype is not phased, but this new one is phased
+					// This is a case of a new 'phasing block' starting (see GATK's 
+					// Read Backed Phasing for details). So this results in a 
+					// phased genotype 
+					// Reference: http://gatkforums.broadinstitute.org/discussion/45/purpose-and-operation-of-read-backed-phasing
+					newGs.set(i, (byte) (PHASED_MASK | (gtCode0 & gtCode1)));
 				} else {
 					// We need the same condition as in 'phased', but also
 					// at least one of them to be homozygous-ALT
-					if (isHomozygousAlt(gt0) || isHomozygousAlt(gt1)) newGs.set(i, (byte) (gt0 & gt1));
+					if (isHomozygousAlt(gtCode0) || isHomozygousAlt(gtCode1)) newGs.set(i, (byte) (gtCode0 & gtCode1));
 				}
 			}
-		} else if (isHaploid() && gt.isHaploid()) {
+		} else if (isHaploid() && gtOld.isHaploid()) {
 			newGs.setPloidy(HAPLOID);
 
 			// Both are haploid genomes: Any matching non-ref is implicitly
 			// phased since these are haploid chromosomes
 			for (int i = 0; i < size; i++) {
 				int gt0 = getCode(i) & GT_MASK;
-				int gt1 = gt.getCode(i) & GT_MASK;
+				int gt1 = gtOld.getCode(i) & GT_MASK;
 				if (gt0 != 0 && gt1 != 0) newGs.set(i, (byte) 1);
 			}
 		} else {
@@ -116,7 +128,7 @@ public class Genotypes implements Serializable {
 			// I'm not sure if this is compliant with the VCF spec.)
 			throw new RuntimeException("Genotype verctors have different zygosity?" //
 					+ "\n\t" + this //
-					+ "\n\t" + gt //
+					+ "\n\t" + gtOld //
 			);
 		}
 
@@ -129,7 +141,12 @@ public class Genotypes implements Serializable {
 	public boolean equalsGenotypes(Genotypes gt) {
 		int size = size();
 		for (int i = 0; i < size; i++)
-			if ((genotype[i] & GT_MASK) != (gt.genotype[i] & GT_MASK)) return false;
+			if ((genotype[i] & GT_MASK) != (gt.genotype[i] & GT_MASK)) {
+				Gpr.debug("NOT EQUALS\n\tthis: " + this + "\n\tgt  :" + gt);
+				return false;
+			}
+
+		Gpr.debug("EQUALS\n\tthis: " + this + "\n\tgt  :" + gt);
 		return true;
 	}
 
@@ -168,10 +185,10 @@ public class Genotypes implements Serializable {
 			return "0" + slash + "0";
 
 		case 1:
-			return "0" + slash + "1";
+			return "1" + slash + "0";
 
 		case 2:
-			return "1" + slash + "0";
+			return "0" + slash + "1";
 
 		case 3:
 			return "1" + slash + "1";
@@ -224,10 +241,6 @@ public class Genotypes implements Serializable {
 
 		return code;
 	}
-
-	//	public Variant getVariant() {
-	//		return variant;
-	//	}
 
 	public Haplotype getHaplotype() {
 		return haplotype;

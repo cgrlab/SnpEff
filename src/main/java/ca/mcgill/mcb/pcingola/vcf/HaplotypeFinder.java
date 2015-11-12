@@ -16,6 +16,34 @@ import ca.mcgill.mcb.pcingola.util.Gpr;
  * A 'haplotype' is a collection of variants that we analyze together
  * to infer a 'haplotype' (a.k.a. 'compound') annotation
  *
+ *
+ * Partial phasing and GATK's Read-Backed Phasing (RBP):
+ * 		Reference: http://gatkforums.broadinstitute.org/discussion/45/purpose-and-operation-of-read-backed-phasing
+ *
+ * 		Phasing in the VCF format:
+ * 		i) The "|" symbol is used for each sample to indicate that each of the alleles
+ * 		of the genotype in question derive from the same haplotype as each of the
+ * 		alleles of the genotype of the same sample in the previous NON-FILTERED variant
+ * 		record. That is, rows without FILTER=PASS are essentially ignored in the read-backed
+ * 		phasing (RBP) algorithm.
+ *
+ * 		ii) Note that the first heterozygous genotype record in a pair of haplotypes will
+ * 		necessarily have a "/" - otherwise, they would be the continuation of the preceding
+ * 		haplotypes.
+ *
+ * 		iii) A homozygous genotype is always "appended" to the preceding haplotype. For example, any
+ * 		0/0 or 1/1 record is always converted into 0|0 and 1|1.
+ *
+ * 		iv) RBP attempts to phase a heterozygous genotype relative the preceding HETEROZYGOUS
+ * 		genotype for that sample. If there is sufficient read information to deduce the two
+ * 		haplotypes (for that sample), then the current genotype is declared phased ("/" changed
+ * 		to "|") and assigned a PQ that is proportional to the estimated Phred-scaled error rate.
+ * 		All homozygous genotypes for that sample that lie in between the two heterozygous genotypes
+ * 		are also assigned the same PQ value (and remain phased).
+ *
+ * 		v) If RBP cannot phase the heterozygous genotype, then the genotype remains with a "/", and no
+ * 		PQ score is assigned. This site essentially starts a new section of haplotype for this sample.
+ *
  * @author pcingola
  */
 public class HaplotypeFinder {
@@ -28,24 +56,6 @@ public class HaplotypeFinder {
 	public HaplotypeFinder() {
 		genotypesByVariant = new HashMap<>();
 		haplotypes = new HashSet<>();
-	}
-
-	// Add genotypes to 'haplotypes' collection
-	void addHaplotypes(Genotypes gtNew) {
-		haplotypes.add(gtNew);
-	}
-
-	void addGenotype(Genotypes gt) {
-		genotypesByVariant.put(gt.getHaplotype().toString(), gt);
-	}
-
-	void replace(Genotypes gtOld, Genotypes gtNew) {
-		if (debug) Gpr.debug("Replacing:" //
-				+ "\n\tOld: " + gtOld //
-				+ "\n\tNew: " + gtNew //
-		);
-		remove(gtOld);
-		addHaplotypes(gtNew); // Add genotypes
 	}
 
 	/**
@@ -90,6 +100,15 @@ public class HaplotypeFinder {
 		return haps;
 	}
 
+	void addGenotype(Genotypes gt) {
+		genotypesByVariant.put(gt.getHaplotype().toString(), gt);
+	}
+
+	// Add genotypes to 'haplotypes' collection
+	void addHaplotypes(Genotypes gtNew) {
+		haplotypes.add(gtNew);
+	}
+
 	/**
 	 * Filter all variants in haplotype
 	 * @return true if all variants pass filter
@@ -106,6 +125,13 @@ public class HaplotypeFinder {
 	 */
 	public boolean filter(Variant var) {
 		return true;
+	}
+
+	/**
+	 * Filter VCF entry
+	 */
+	public boolean filter(VcfEntry ve) {
+		return ve.isFilterPass();
 	}
 
 	public Set<Haplotype> getHaplotypes() {
@@ -153,11 +179,20 @@ public class HaplotypeFinder {
 		genotypesByVariant.remove(gt.getHaplotype().toString());
 	}
 
+	void replace(Genotypes gtOld, Genotypes gtNew) {
+		if (debug) Gpr.debug("Replacing:" //
+				+ "\n\tOld: " + gtOld //
+				+ "\n\tNew: " + gtNew //
+		);
+		remove(gtOld);
+		addHaplotypes(gtNew); // Add genotypes
+	}
+
 	@Override
 	public String toString() {
 		StringBuilder sb = new StringBuilder();
 
-		sb.append("Genotype vectors: " + genotypesByVariant.size() + "\n");
+		sb.append("Genotypes: " + genotypesByVariant.size() + "\n");
 		int i = 0;
 		for (Genotypes gt : genotypesByVariant.values()) {
 			sb.append(i + "\t" + gt + "\n");

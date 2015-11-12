@@ -16,7 +16,7 @@ import ca.mcgill.mcb.pcingola.interval.Variant;
  */
 public class Haplotype implements Iterable<Variant> {
 
-	List<Variant> variants;
+	List<Variant> variants; // Variants sorted by start coordinate
 
 	public Haplotype() {
 		variants = new ArrayList<Variant>();
@@ -28,6 +28,7 @@ public class Haplotype implements Iterable<Variant> {
 
 	public void add(Variant var) {
 		variants.add(var);
+		Collections.sort(variants); // Keep collection sorted
 	}
 
 	/**
@@ -37,12 +38,12 @@ public class Haplotype implements Iterable<Variant> {
 		// Variants must be applied in reverse order (i.e. from
 		// the end of the marker to the begining). This is because
 		// an InDel can change the marker coordinates.
-		Collections.sort(variants, Collections.reverseOrder());
-
-		for (Variant var : variants)
+		for (int i = size() - 1; i >= 0; i--) {
 			if (marker != null) { // A large deletion can delete the whole marker
+				Variant var = variants.get(i);
 				marker = marker.apply(var);
 			}
+		}
 
 		return marker;
 	}
@@ -58,11 +59,11 @@ public class Haplotype implements Iterable<Variant> {
 	 * Genotype string in 'ANN' format
 	 */
 	public String getAnnGenotype() {
-		Collections.sort(variants, Collections.reverseOrder());
-
 		StringBuilder sb = new StringBuilder();
 		boolean first = true;
-		for (Variant var : variants) {
+		for (int i = size() - 1; i >= 0; i--) {
+			Variant var = variants.get(i);
+
 			if (first) {
 				sb.append(var.getGenotype());
 				first = false;
@@ -76,6 +77,28 @@ public class Haplotype implements Iterable<Variant> {
 		}
 
 		return sb.toString();
+	}
+
+	/**
+	 * Get start coordinate form "first" variant (i.e. the minimum start
+	 * coordinate of any variant in this haplotype)
+	 */
+	public int getFirstStart() {
+		int start = Integer.MAX_VALUE;
+		for (Variant v : this)
+			start = Math.min(start, v.getStart());
+		return start;
+	}
+
+	/**
+	 * Get start coordinate form "last" variant (i.e. the maximum start
+	 * coordinate of any variant in this haplotype)
+	 */
+	public int getLastStart() {
+		int start = 0;
+		for (Variant v : this)
+			start = Math.max(start, v.getStart());
+		return start;
 	}
 
 	public List<Variant> getVariants() {
@@ -93,8 +116,6 @@ public class Haplotype implements Iterable<Variant> {
 
 	@Override
 	public String toString() {
-		Collections.sort(variants);
-
 		StringBuilder sb = new StringBuilder();
 		for (Variant var : variants) {
 			if (sb.length() > 0) sb.append(" + ");

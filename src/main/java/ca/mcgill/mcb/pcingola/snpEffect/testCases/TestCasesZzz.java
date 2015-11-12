@@ -37,25 +37,27 @@ public class TestCasesZzz {
 		HaplotypeFinder hf = new HaplotypeFinder();
 
 		for (VcfEntry ve : vcf) {
+			Collection<Haplotype> haps = null;
+
 			if (ve.isMultiallelic()) {
 				if (verbose) Gpr.debug(ve);
 				for (Variant var : ve.variants()) {
 					String alt = var.getGenotype();
 					Genotypes gv = new Genotypes(ve, var.getGenotype());
-					if (verbose) Gpr.debug("\tAlt: '" + alt + "'\tGenotype vector: " + gv);
+					if (verbose) Gpr.debug("\tAlt: '" + alt + "'\tGenotypes: " + gv);
 
-					Collection<Haplotype> haps = hf.add(gv);
-
-					if (verbose & haps != null) {
-						Gpr.debug("Haplotypes found:");
-						for (Haplotype hap : haps)
-							System.err.println("\t" + hap);
-					}
+					haps = hf.add(gv);
 				}
 			} else {
 				Genotypes gv = new Genotypes(ve);
-				if (verbose) Gpr.debug(ve + "\n\tGenotype vector: " + gv);
-				hf.add(gv);
+				if (verbose) Gpr.debug(ve + "\n\tGenotypes: " + gv);
+				haps = hf.add(gv);
+			}
+
+			if (verbose & haps != null) {
+				Gpr.debug("New haplotypes found:");
+				for (Haplotype hap : haps)
+					System.err.println("\t" + hap);
 			}
 		}
 
