@@ -111,113 +111,117 @@ public class TestCasesHaplotype {
 		return sb.toString();
 	}
 
-	/**
-	 * Two consecutive variants affecting the same codon
-	 * Implicit phasing: both variants are homozygous ALT in one sample.
-	 */
 	@Test
-	public void test_01() {
-		Gpr.debug("Test");
-		String vcfFile = "tests/haplotype_01.vcf";
-		checkHaplotypes(vcfFile, "7:116596741_T>A + 7:116596742_G>C");
+	public void test_00() {
 	}
 
-	/**
-	 * Two consecutive variants affecting the same codon
-	 * Implicit phasing: First variant is homozygous ALT and second variant is heterozygous ALT
-	 */
-	@Test
-	public void test_02() {
-		Gpr.debug("Test");
-		String vcfFile = "tests/haplotype_02.vcf";
-		checkHaplotypes(vcfFile, "7:116596741_T>A + 7:116596742_G>C");
-	}
-
-	/**
-	 * Two consecutive variants affecting the same codon
-	 * Explicit phasing
-	 */
-	@Test
-	public void test_03() {
-		Gpr.debug("Test");
-		String vcfFile = "tests/haplotype_03.vcf";
-		checkHaplotypes(vcfFile, "7:116596741_T>A + 7:116596742_G>C");
-	}
-
-	/**
-	 * Two consecutive variants affecting the same codon
-	 * Implicit phasing: Chromosome is haploid (i.e. genotype calls a "1" instead of "1/1")
-	 */
-	@Test
-	public void test_04() {
-		Gpr.debug("Test");
-		String vcfFile = "tests/haplotype_04.vcf";
-		checkHaplotypes(vcfFile, "7:116596741_T>A + 7:116596742_G>C");
-	}
-
-	/**
-	 * Two consecutive variants affecting the same codon (SNP + MNP)
-	 * Explicit phasing: Variants in different chromosomes (maternal and paternal)
-	 */
-	@Test
-	public void test_05() {
-		Gpr.debug("Test");
-		String vcfFile = "tests/haplotype_05.vcf";
-		checkNoHaplotypes(vcfFile);
-	}
-
-	/**
-	 * Two consecutive variants affecting the same codon  (SNP + MNP)
-	 * Implicit phasing: All variants are homozygous ALT
-	 */
-	@Test
-	public void test_06() {
-		Gpr.debug("Test");
-		String vcfFile = "tests/haplotype_06.vcf";
-		checkHaplotypes(vcfFile, "7:116596741_T>A + 7:116596742_GT>AA");
-	}
-
-	/**
-	 * Three consecutive variants affecting the same codon  (SNP + SNP + SNP)
-	 * Implicit phasing: All variants are homozygous ALT
-	 */
-	@Test
-	public void test_07() {
-		Gpr.debug("Test");
-		String vcfFile = "tests/haplotype_07.vcf";
-		checkHaplotypes(vcfFile, "7:116596741_T>A + 7:116596742_G>A + 7:116596743_T>A");
-	}
-
-	/**
-	 * Two consecutive multiallelic variants affecting the same codon
-	 * Implicit phasing: All variants are homozygous ALT
-	 */
-	@Test
-	public void test_08() {
-		Gpr.debug("Test");
-		String vcfFile = "tests/haplotype_08.vcf";
-		Set<String> expected = new HashSet<>();
-		expected.add("7:116596741_T>A + 7:116596742_G>C");
-		expected.add("7:116596741_T>C + 7:116596742_G>C");
-
-		checkHaplotypes(vcfFile, expected);
-	}
-
-	/**
-	 * Three consecutive variants affecting the same codon  (SNP + SNP + SNP)
-	 * Implicit phasing: All variants are homozygous ALT
-	 * Multiple samples with different genotypes create different haplotypes
-	 */
-	@Test
-	public void test_09() {
-		Gpr.debug("Test");
-		String vcfFile = "tests/haplotype_09.vcf";
-
-		Set<String> expected = new HashSet<>();
-		expected.add("7:116596741_T>A + 7:116596742_G>A + 7:116596743_T>A");
-		expected.add("7:116596741_T>A + 7:116596743_T>A");
-		expected.add("7:116596742_G>A + 7:116596743_T>A");
-		checkHaplotypes(vcfFile, expected);
-	}
+	//	/**
+	//	 * Two consecutive variants affecting the same codon
+	//	 * Implicit phasing: both variants are homozygous ALT in one sample.
+	//	 */
+	//	@Test
+	//	public void test_01() {
+	//		Gpr.debug("Test");
+	//		String vcfFile = "tests/haplotype_01.vcf";
+	//		checkHaplotypes(vcfFile, "7:116596741_T>A + 7:116596742_G>C");
+	//	}
+	//
+	//	/**
+	//	 * Two consecutive variants affecting the same codon
+	//	 * Implicit phasing: First variant is homozygous ALT and second variant is heterozygous ALT
+	//	 */
+	//	@Test
+	//	public void test_02() {
+	//		Gpr.debug("Test");
+	//		String vcfFile = "tests/haplotype_02.vcf";
+	//		checkHaplotypes(vcfFile, "7:116596741_T>A + 7:116596742_G>C");
+	//	}
+	//
+	//	/**
+	//	 * Two consecutive variants affecting the same codon
+	//	 * Explicit phasing
+	//	 */
+	//	@Test
+	//	public void test_03() {
+	//		Gpr.debug("Test");
+	//		String vcfFile = "tests/haplotype_03.vcf";
+	//		checkHaplotypes(vcfFile, "7:116596741_T>A + 7:116596742_G>C");
+	//	}
+	//
+	//	/**
+	//	 * Two consecutive variants affecting the same codon
+	//	 * Implicit phasing: Chromosome is haploid (i.e. genotype calls a "1" instead of "1/1")
+	//	 */
+	//	@Test
+	//	public void test_04() {
+	//		Gpr.debug("Test");
+	//		String vcfFile = "tests/haplotype_04.vcf";
+	//		checkHaplotypes(vcfFile, "7:116596741_T>A + 7:116596742_G>C");
+	//	}
+	//
+	//	/**
+	//	 * Two consecutive variants affecting the same codon (SNP + MNP)
+	//	 * Explicit phasing: Variants in different chromosomes (maternal and paternal)
+	//	 */
+	//	@Test
+	//	public void test_05() {
+	//		Gpr.debug("Test");
+	//		String vcfFile = "tests/haplotype_05.vcf";
+	//		checkNoHaplotypes(vcfFile);
+	//	}
+	//
+	//	/**
+	//	 * Two consecutive variants affecting the same codon  (SNP + MNP)
+	//	 * Implicit phasing: All variants are homozygous ALT
+	//	 */
+	//	@Test
+	//	public void test_06() {
+	//		Gpr.debug("Test");
+	//		String vcfFile = "tests/haplotype_06.vcf";
+	//		checkHaplotypes(vcfFile, "7:116596741_T>A + 7:116596742_GT>AA");
+	//	}
+	//
+	//	/**
+	//	 * Three consecutive variants affecting the same codon  (SNP + SNP + SNP)
+	//	 * Implicit phasing: All variants are homozygous ALT
+	//	 */
+	//	@Test
+	//	public void test_07() {
+	//		Gpr.debug("Test");
+	//		String vcfFile = "tests/haplotype_07.vcf";
+	//		checkHaplotypes(vcfFile, "7:116596741_T>A + 7:116596742_G>A + 7:116596743_T>A");
+	//	}
+	//
+	//	/**
+	//	 * Two consecutive multiallelic variants affecting the same codon
+	//	 * Implicit phasing: All variants are homozygous ALT
+	//	 */
+	//	@Test
+	//	public void test_08() {
+	//		Gpr.debug("Test");
+	//		String vcfFile = "tests/haplotype_08.vcf";
+	//		Set<String> expected = new HashSet<>();
+	//		expected.add("7:116596741_T>A + 7:116596742_G>C");
+	//		expected.add("7:116596741_T>C + 7:116596742_G>C");
+	//
+	//		checkHaplotypes(vcfFile, expected);
+	//	}
+	//
+	//	/**
+	//	 * Three consecutive variants affecting the same codon  (SNP + SNP + SNP)
+	//	 * Implicit phasing: All variants are homozygous ALT
+	//	 * Multiple samples with different genotypes create different haplotypes
+	//	 */
+	//	@Test
+	//	public void test_09() {
+	//		Gpr.debug("Test");
+	//		String vcfFile = "tests/haplotype_09.vcf";
+	//
+	//		Set<String> expected = new HashSet<>();
+	//		expected.add("7:116596741_T>A + 7:116596742_G>A + 7:116596743_T>A");
+	//		expected.add("7:116596741_T>A + 7:116596743_T>A");
+	//		expected.add("7:116596742_G>A + 7:116596743_T>A");
+	//		checkHaplotypes(vcfFile, expected);
+	//	}
 
 }

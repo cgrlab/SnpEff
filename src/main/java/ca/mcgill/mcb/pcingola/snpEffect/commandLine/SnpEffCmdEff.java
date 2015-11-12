@@ -75,7 +75,7 @@ public class SnpEffCmdEff extends SnpEff implements VcfAnnotator {
 	boolean createSummaryCsv = false;
 	boolean createSummaryHtml = true;
 	boolean lossOfFunction = true; // Create loss of function LOF tag?
-	boolean haplotypeAnnotations = true; // Calculate haplotype annotations
+	boolean haplotypeAnnotations = false; // Calculate haplotype annotations
 	boolean useGeneId = false; // Use gene ID instead of gene name (VCF output)
 	boolean useHgvs = true; // Use Hgvs notation
 	boolean useLocalTemplate = false; // Use template from 'local' file instead of 'jar' (this is only used for development and debugging)
@@ -710,7 +710,8 @@ public class SnpEffCmdEff extends SnpEff implements VcfAnnotator {
 
 					case "-haplotype":
 						haplotypeAnnotations = true;
-						break;
+						throw new RuntimeException("Haplotype annotations not available in this version");
+						// break;
 
 					case "-nohaplotype":
 						haplotypeAnnotations = false;
@@ -1113,10 +1114,10 @@ public class SnpEffCmdEff extends SnpEff implements VcfAnnotator {
 		System.err.println("\t-cancerSamples <file>           : Two column TXT file defining 'oringinal \\t derived' samples.");
 		System.err.println("\t-formatEff                      : Use 'EFF' field compatible with older versions (instead of 'ANN').");
 		System.err.println("\t-geneId                         : Use gene ID instead of gene name (VCF output). Default: " + useGeneId);
-		System.err.println("\t-haplotype                      : Enable haplotype (composite) annotations. Default: " + haplotypeAnnotations);
+		// System.err.println("\t-haplotype                      : Enable haplotype (composite) annotations. Default: " + haplotypeAnnotations);
 		System.err.println("\t-hgvs                           : Use HGVS annotations for amino acid sub-field. Default: " + useHgvs);
 		System.err.println("\t-lof                            : Add loss of function (LOF) and Nonsense mediated decay (NMD) tags.");
-		System.err.println("\t-noHaplotype                    : Disable haplotype (composite) annotations. Default: " + !haplotypeAnnotations);
+		// System.err.println("\t-noHaplotype                    : Disable haplotype (composite) annotations. Default: " + !haplotypeAnnotations);
 		System.err.println("\t-noHgvs                         : Do not add HGVS annotations.");
 		System.err.println("\t-noLof                          : Do not add LOF and NMD annotations.");
 		System.err.println("\t-noShiftHgvs                    : Do not shift variants according to HGVS notation (most 3prime end).");
