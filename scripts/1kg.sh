@@ -1,62 +1,27 @@
 #!/bin/sh
 
 # VCF="1kg/ALL.wgs.phase1.projectConsensus.snps.sites.vcf"
-VCF="1kg/ALL.wgs.phase1_release_v3.20101123.snps_indels_sv.sites.vcf"
-VCF="1kg/1kgchr1.vcf"
+VCF="$HOME/snpEff/db/GRCh37/1kg/1kg.vcf"
 
-REF=GRCh37.66
-REF=hg19
+ANN=`dirname $VCF`/`basename $VCF .vcf`.ann.vcf
+REF=GRCh37.75
 
-EFF=`dirname $VCF`/`basename $VCF .vcf`.eff.vcf
-
-#---
-# Get & unzip file
-#---
-
-#cd 1kg
-
-#wget "ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/release/20101123/interim_phase1_release/ALL.wgs.phase1.projectConsensus.snps.sites.vcf.gz"
-#gunzip ALL.wgs.phase1.projectConsensus.snps.sites.vcf.gz 
-
-#wget ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/release/20110521/ALL.wgs.phase1_release_v3.20101123.snps_indels_sv.sites.vcf.gz
-#$HOME/tools/pigz/pigz -d ALL.wgs.phase1_release_v3.20101123.snps_indels_sv.sites.vcf.gz
-
-#cd -
+SNPEFF="java -Xmx8G -jar snpEff.jar"
+SNPSIFT="java -Xmx4G -jar SnpSift.jar"
 
 #---
-# SNP analysis
-# Note: The are 41.6 millon variants
-#	$ wc -l 1kg/ALL.wgs.phase1.projectConsensus.snps.sites.vcf
-#	41599494 1kg/ALL.wgs.phase1.projectConsensus.snps.sites.vcf
-# Time:
-#	- VCF input and VCF output: 81m30.039s
-#	- VCF input and no output : 77m18.157s
+# Annotations
 #---
 
-time java -Xmx4G -jar snpEff.jar eff \
-	-v \
-	-stats $VCF.html \
-	$REF \
-	$VCF \
-	> $EFF
+time $SNPEFF ann -v -stats $VCF.html $REF $VCF > $ANN
 
-#echo "TXT output"
-#time ./scripts/snpEffXL.sh \
-#	-v \
-#	-useLocalTemplate \
-#	-stats $VCF.html \
-#	$REF \
-#	$VCF \
-#	> $EFF.txt
+echo Annotate using dbSnp, dbNSFP and ClinVar
+time $SNPSIFT annotate -v $ANN
+java -Xmx1g -jar SnpSift.jar \
+    annotate \
+    -v \
+    protocols/db/clinvar_00-latest.vcf \
+    protocols/ex1.eff.cc.vcf \
 
-#---
-#	Multi-threaded version 
-#---
-#echo "VCF output (multi-thread)"
-#time ./scripts/snpEffXL.sh \
-#	-v \
-#	-t \
-#	$REF \
-#	$VCF \
-#	> $EFF
+
 
